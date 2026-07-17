@@ -1,0 +1,52 @@
+﻿# ==========================================
+# DevFlow Hub
+# Ficheiros locais e gerados
+# ==========================================
+
+# Java e Maven
+**/target/
+*.class
+
+# Node.js e Vite
+**/node_modules/
+**/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Configuração local e credenciais
+.env
+.env.*
+!.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+backend/src/main/resources/application-local.properties
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Ficheiros temporários
+*.tmp
+*.temp
+*.bak
+*.bkp
+*~
+
+# Testes e cobertura
+coverage/
+.nyc_output/
+
+# Entrega gerada
+release/
+DevFlow_Hub_Entrega.zip
+devflow-hub.jar
