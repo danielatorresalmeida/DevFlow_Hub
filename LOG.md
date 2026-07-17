@@ -83,3 +83,79 @@ Criar a branch `develop` e iniciar a branch `feature/database-schema` para adici
 ### Linhas de código escritas/alteradas — estimativa
 
 120 linhas de configuração e documentação.
+
+---
+
+## Marco 1 — 17/07/2026 — Estrutura PostgreSQL e migração
+
+### Objetivo da sessão
+
+Adicionar ao novo repositório a estrutura persistente do DevFlow Hub e
+documentar a criação e atualização da base de dados PostgreSQL.
+
+### Funcionalidades implementadas
+
+- Adição do script principal `devflow_hub.sql`.
+- Criação das tabelas `collaborators`, `projects`, `tasks` e
+  `internal_programs`.
+- Inclusão das relações entre colaboradores, projetos, tarefas e programas.
+- Utilização de identificadores `BIGINT`, compatíveis com `Long` no backend.
+- Inclusão de campos de auditoria.
+- Inclusão dos campos utilizados pelo temporizador das tarefas.
+- Inclusão de constraints, índices e dados de demonstração.
+- Adição do script `migrate_existing_database.sql`.
+- Criação de um guia específico para preparar e atualizar o PostgreSQL.
+
+### Problemas encontrados
+
+- A base de dados de trabalho já continha tabelas criadas por versões
+  anteriores.
+- `CREATE TABLE IF NOT EXISTS` não recria tabelas existentes nem adiciona
+  constraints que estejam em falta.
+- A primeira consulta às foreign keys não apresentou resultados na base
+  antiga.
+
+### Como resolvi
+
+- Mantive a base de trabalho sem eliminar os dados existentes.
+- Criei uma base vazia chamada `devflow_hub_validation`.
+- Executei o script principal numa instalação limpa.
+- Validei separadamente as tabelas, os dados de demonstração e as foreign
+  keys.
+- Mantive um script específico para a migração de bases anteriores.
+
+### Ficheiros atualizados
+
+- `database/devflow_hub.sql`
+- `database/migrate_existing_database.sql`
+- `database/README.md`
+- `README.md`
+- `LOG.md`
+
+### Estado atual
+
+- As quatro tabelas principais foram criadas corretamente.
+- Foram carregados 6 colaboradores, 4 projetos, 5 tarefas e 4 programas
+  internos.
+- Foram validadas quatro foreign keys:
+  - `internal_programs.manager_id` referencia `collaborators.id`;
+  - `projects.manager_id` referencia `collaborators.id`;
+  - `tasks.assignee_id` referencia `collaborators.id`;
+  - `tasks.project_id` referencia `projects.id`.
+- O script principal está preparado para instalações novas.
+- O script de migração está disponível para bases antigas.
+- Nenhuma password administrativa real foi adicionada ao repositório.
+
+### Validação ainda pendente
+
+- Executar `migrate_existing_database.sql` numa cópia de uma base antiga.
+- Confirmar o esquema através do backend com `ddl-auto=validate`.
+
+### Próxima etapa
+
+Adicionar a fundação do backend Spring Boot, incluindo Maven, configuração
+segura, entidades e repositories.
+
+### Linhas de código escritas/alteradas — estimativa
+
+354 linhas de SQL e documentação.

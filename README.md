@@ -67,3 +67,38 @@ O código da aplicação será adicionado progressivamente através de branches 
 ## Autora
 
 Daniela Torres Almeida
+
+## Base de dados
+
+O DevFlow Hub utiliza PostgreSQL para persistir colaboradores, projetos,
+tarefas e programas internos.
+
+Os ficheiros da base de dados encontram-se em:
+
+```text
+database/
+├── devflow_hub.sql
+├── migrate_existing_database.sql
+└── README.md
+```
+
+- `devflow_hub.sql` cria uma instalação nova e adiciona dados de demonstração.
+- `migrate_existing_database.sql` atualiza bases criadas por versões anteriores.
+- `database/README.md` contém as instruções de instalação e migração.
+
+### Validação realizada
+
+O script principal foi executado numa base PostgreSQL vazia chamada
+`devflow_hub_validation`.
+
+Foram confirmadas:
+
+- as tabelas `collaborators`, `projects`, `tasks` e `internal_programs`;
+- 6 colaboradores de demonstração;
+- 4 projetos;
+- 5 tarefas;
+- 4 programas internos;
+- `internal_programs.manager_id` referencia `collaborators.id`;
+- `projects.manager_id` referencia `collaborators.id`;
+- `tasks.assignee_id` referencia `collaborators.id`;
+- `tasks.project_id` referencia `projects.id`.
