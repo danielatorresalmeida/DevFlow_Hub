@@ -102,3 +102,11 @@ Foram confirmadas:
 - `projects.manager_id` referencia `collaborators.id`;
 - `tasks.assignee_id` referencia `collaborators.id`;
 - `tasks.project_id` referencia `projects.id`.
+
+### Instalação local
+
+As instruções completas para criar a base de dados numa máquina local
+estão disponíveis em:
+
+[`database/INSTALACAO_BASE_DADOS_LOCAL.txt`](database/INSTALACAO_BASE_DADOS_LOCAL.txt)
+~

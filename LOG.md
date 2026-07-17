@@ -159,3 +159,52 @@ segura, entidades e repositories.
 ### Linhas de código escritas/alteradas — estimativa
 
 354 linhas de SQL e documentação.
+
+---
+
+## Atualização — Guia de instalação local da base de dados
+
+### Objetivo da sessão
+
+Criar um documento simples com as instruções necessárias para preparar a base
+de dados PostgreSQL numa máquina local.
+
+### Funcionalidades implementadas
+
+- Criação de um guia TXT para instalação local do PostgreSQL.
+- Documentação da criação da base `devflow_hub`.
+- Instruções para executar o script `devflow_hub.sql`.
+- Instruções para configurar `DB_URL`, `DB_USERNAME` e `DB_PASSWORD`.
+- Inclusão de consultas para validar tabelas, dados e chaves estrangeiras.
+- Documentação de erros frequentes e respetivas soluções.
+
+### Problemas encontrados
+
+- Era necessário fornecer instruções independentes do README principal.
+- As credenciais do PostgreSQL variam entre computadores.
+
+### Como resolvi
+
+- Criei um ficheiro TXT dedicado à instalação local.
+- Mantive as passwords reais fora do repositório.
+- Adicionei uma referência ao guia no README principal.
+
+### Ficheiros atualizados
+
+- `database/INSTALACAO_BASE_DADOS_LOCAL.txt`
+- `README.md`
+- `LOG.md`
+
+### Estado atual
+
+- O projeto possui instruções para criar a base de dados localmente.
+- O utilizador pode configurar as suas próprias credenciais.
+- O guia inclui validação das quatro tabelas e das foreign keys.
+
+### Validação ainda pendente
+
+- Testar o guia completo numa segunda máquina ou instalação PostgreSQL limpa.
+
+### Próxima etapa
+
+Continuar a implementação da branch `feature/backend-core`.
