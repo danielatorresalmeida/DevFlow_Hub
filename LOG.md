@@ -80,9 +80,13 @@ Criar uma fundação limpa para o projeto DevFlow Hub, removendo dependências g
 
 Criar a branch `develop` e iniciar a branch `feature/database-schema` para adicionar o esquema PostgreSQL e os dados de demonstração.
 
-### Linhas de código escritas/alteradas — estimativa
+### Estatísticas do Git
 
-120 linhas de configuração e documentação.
+Segundo as estatísticas do Git, este marco adicionou **5 ficheiros** e
+**259 linhas**.
+
+A contagem inclui os ficheiros de configuração e documentação utilizados para
+criar a fundação do novo repositório.
 
 ---
 
@@ -156,9 +160,13 @@ documentar a criação e atualização da base de dados PostgreSQL.
 Adicionar a fundação do backend Spring Boot, incluindo Maven, configuração
 segura, entidades e repositories.
 
-### Linhas de código escritas/alteradas — estimativa
+### Estatísticas do Git
 
-354 linhas de SQL e documentação.
+Segundo as estatísticas do Git, este marco adicionou **5 ficheiros** e
+**465 linhas**.
+
+A contagem inclui os scripts SQL, a documentação da base de dados e as
+atualizações associadas no README e no LOG.
 
 ---
 
@@ -208,3 +216,114 @@ de dados PostgreSQL numa máquina local.
 ### Próxima etapa
 
 Continuar a implementação da branch `feature/backend-core`.
+
+### Estatísticas do Git
+
+Segundo as estatísticas do Git, esta atualização alterou **3 ficheiros**, com
+**371 linhas adicionadas** e **1 linha removida**.
+
+A contagem inclui o guia de instalação local e as atualizações correspondentes
+no README e no LOG.
+
+---
+
+## Marco 2 — 20/07/2026 — Fundação e serviços do backend
+
+### Objetivo da sessão
+
+Adicionar ao novo repositório a fundação Spring Boot e organizar as principais
+regras de negócio do DevFlow Hub através de entidades, repositories e services.
+
+### Funcionalidades implementadas
+
+- Configuração do backend com Java 21 e Spring Boot.
+- Adição do Maven Wrapper.
+- Configuração segura da ligação PostgreSQL através de variáveis de ambiente.
+- Criação das entidades `Collaborator`, `Project`, `Task` e
+  `InternalProgram`.
+- Criação dos repositories Spring Data JPA.
+- Centralização dos estados e prioridades permitidos.
+- Criação de uma função comum para normalização de texto.
+- Adição de exceções reutilizáveis.
+- Implementação das regras de negócio dos colaboradores.
+- Implementação da lógica de autenticação simples de colaboradores.
+- Implementação das regras de negócio dos projetos.
+- Implementação das regras de negócio das tarefas.
+- Implementação das ações de iniciar, pausar, retomar e concluir o timer.
+- Implementação das regras de negócio dos programas internos.
+- Injeção de `Clock` para tornar a lógica temporal testável.
+
+### Problemas encontrados
+
+- O Java configurado anteriormente dependia de uma pasta interna de uma
+  extensão do VS Code.
+- A pasta utilizada pela extensão deixou de existir.
+- O Maven Wrapper não conseguia encontrar uma instalação válida através de
+  `JAVA_HOME`.
+- Os valores de estados e prioridades estavam distribuídos por diferentes
+  partes da aplicação.
+- A lógica temporal precisava de ser testável sem depender diretamente da hora
+  real do computador.
+
+### Como resolvi
+
+- Instalei o Eclipse Temurin JDK 21 através do WinGet.
+- Configurei permanentemente `JAVA_HOME`.
+- Atualizei o `PATH` e as configurações Java do VS Code.
+- Removi dependências de caminhos temporários da extensão Pleiades.
+- Centralizei estados e prioridades na camada de domínio.
+- Mantive os repositories responsáveis apenas pelo acesso aos dados.
+- Mantive as regras da aplicação dentro dos services.
+- Injetei um `Clock` configurável no service de tarefas.
+- Validei a compilação através do Maven Wrapper.
+
+### Ficheiros atualizados
+
+- `backend/.mvn/`
+- `backend/mvnw`
+- `backend/mvnw.cmd`
+- `backend/pom.xml`
+- `backend/src/main/java/com/devflowhub/backend/BackendApplication.java`
+- `backend/src/main/java/com/devflowhub/backend/config/`
+- `backend/src/main/java/com/devflowhub/backend/domain/`
+- `backend/src/main/java/com/devflowhub/backend/entity/`
+- `backend/src/main/java/com/devflowhub/backend/exception/`
+- `backend/src/main/java/com/devflowhub/backend/repository/`
+- `backend/src/main/java/com/devflowhub/backend/service/`
+- `backend/src/main/java/com/devflowhub/backend/util/`
+- `backend/src/main/resources/application.properties`
+- `backend/src/main/resources/application-local.example.properties`
+- `README.md`
+- `LOG.md`
+
+### Estado atual
+
+- A fundação Spring Boot está presente.
+- Java 21 está instalado e configurado.
+- As entidades estão alinhadas com o esquema PostgreSQL.
+- Os repositories estão disponíveis.
+- As principais regras de negócio estão implementadas.
+- O temporizador das tarefas está implementado.
+- O backend compila com sucesso através do Maven Wrapper.
+- Nenhuma password administrativa foi adicionada ao repositório.
+
+### Validação ainda pendente
+
+- Adicionar testes unitários dos services.
+- Executar o backend ligado à base PostgreSQL.
+- Validar o esquema com `ddl-auto=validate`.
+- Adicionar os controllers REST.
+- Adicionar o tratamento global dos erros da API.
+- Adicionar os controllers MVC e a interface Thymeleaf.
+
+### Próxima etapa
+
+Criar a branch `feature/rest-api` e implementar os endpoints REST da aplicação.
+
+### Estatísticas do Git
+
+Segundo as estatísticas do Git, a pasta `backend` adicionou **24 ficheiros** e
+**1 855 linhas**.
+
+A contagem inclui código Java, Maven Wrapper, configuração Spring Boot e
+ficheiros de propriedades.
