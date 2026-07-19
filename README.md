@@ -17,7 +17,7 @@ O código foi desenvolvido anteriormente num repositório de trabalho. A nova or
 
 O histórico reorganizado não pretende alterar as datas reais de desenvolvimento. Os commits deste repositório representam a organização técnica dos principais marcos do projeto.
 
-## Tecnologias previstas
+## Tecnologias do projeto
 
 ### Backend
 
@@ -60,9 +60,24 @@ O histórico reorganizado não pretende alterar as datas reais de desenvolviment
 
 ## Estado atual
 
-Fundação do novo repositório criada.
+- Repositório reorganizado com branches e commits descritivos.
+- Estrutura PostgreSQL criada e validada numa base de dados limpa.
+- Scripts de instalação e migração disponíveis.
+- Guia de instalação local da base de dados disponível.
+- Backend Spring Boot configurado com Java 21.
+- Entidades JPA e repositories implementados.
+- Services de colaboradores, projetos, tarefas e programas internos implementados.
+- Temporizador das tarefas implementado.
+- Backend compilado com sucesso através do Maven Wrapper.
 
-O código da aplicação será adicionado progressivamente através de branches e commits organizados.
+Ainda estão pendentes:
+
+- controllers e endpoints REST;
+- tratamento global dos erros da API;
+- testes automatizados;
+- interface Thymeleaf;
+- frontend React;
+- validação do JAR final.
 
 ## Autora
 
@@ -79,9 +94,11 @@ Os ficheiros da base de dados encontram-se em:
 database/
 ├── devflow_hub.sql
 ├── migrate_existing_database.sql
+├── INSTALACAO_BASE_DADOS_LOCAL.txt
 └── README.md
 ```
 
+- `INSTALACAO_BASE_DADOS_LOCAL.txt` explica como preparar a base de dados numa máquina local.
 - `devflow_hub.sql` cria uma instalação nova e adiciona dados de demonstração.
 - `migrate_existing_database.sql` atualiza bases criadas por versões anteriores.
 - `database/README.md` contém as instruções de instalação e migração.
@@ -109,4 +126,54 @@ As instruções completas para criar a base de dados numa máquina local
 estão disponíveis em:
 
 [`database/INSTALACAO_BASE_DADOS_LOCAL.txt`](database/INSTALACAO_BASE_DADOS_LOCAL.txt)
-~
+
+## Backend
+
+O backend do DevFlow Hub utiliza Java 21, Spring Boot, Spring Data JPA e
+PostgreSQL.
+
+A organização segue uma arquitetura por camadas:
+
+```text
+backend/src/main/java/com/devflowhub/backend/
+├── config/
+├── domain/
+├── entity/
+├── exception/
+├── repository/
+├── service/
+└── util/
+```
+
+### Responsabilidades
+
+- `config`: configurações técnicas partilhadas;
+- `domain`: estados, prioridades e valores permitidos;
+- `entity`: entidades JPA associadas às tabelas PostgreSQL;
+- `exception`: exceções reutilizáveis da aplicação;
+- `repository`: acesso aos dados com Spring Data JPA;
+- `service`: regras de negócio da aplicação;
+- `util`: funções comuns de normalização.
+
+### Funcionalidades implementadas
+
+- gestão de colaboradores;
+- lógica de autenticação simples de colaboradores;
+- gestão de projetos e responsáveis;
+- gestão de tarefas;
+- prioridades `LOW`, `MEDIUM` e `HIGH`;
+- estados `PENDING`, `IN_PROGRESS`, `REVIEW` e `COMPLETED`;
+- início, pausa, retoma e conclusão do temporizador;
+- gestão de programas internos;
+- validação das relações entre entidades.
+
+### Compilação
+
+A compilação pode ser validada através do Maven Wrapper:
+
+```cmd
+cd backend
+.\mvnw.cmd -DskipTests compile
+```
+
+O backend foi compilado com sucesso utilizando Java 21.
