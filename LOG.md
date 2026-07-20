@@ -1,4 +1,4 @@
-﻿# DevFlow Hub — Registo de Desenvolvimento
+﻿# DevFlow Hub - Registo de Desenvolvimento
 
 ## Nota sobre a reorganização
 
@@ -10,7 +10,7 @@ As datas dos novos commits representam a data da reorganização no Git e não s
 
 ---
 
-## Marco 0 — 17/07/2026 — Criação do novo repositório organizado
+## Marco 0 - 17/07/2026 - Criação do novo repositório organizado
 
 ### Objetivo da sessão
 
@@ -90,7 +90,7 @@ criar a fundação do novo repositório.
 
 ---
 
-## Marco 1 — 17/07/2026 — Estrutura PostgreSQL e migração
+## Marco 1 - 17/07/2026 - Estrutura PostgreSQL e migração
 
 ### Objetivo da sessão
 
@@ -170,7 +170,7 @@ atualizações associadas no README e no LOG.
 
 ---
 
-## Atualização — Guia de instalação local da base de dados
+## Atualização - Guia de instalação local da base de dados
 
 ### Objetivo da sessão
 
@@ -227,7 +227,7 @@ no README e no LOG.
 
 ---
 
-## Marco 2 — 20/07/2026 — Fundação e serviços do backend
+## Marco 2 - 20/07/2026 - Fundação e serviços do backend
 
 ### Objetivo da sessão
 
@@ -327,3 +327,115 @@ Segundo as estatísticas do Git, a pasta `backend` adicionou **24 ficheiros** e
 
 A contagem inclui código Java, Maven Wrapper, configuração Spring Boot e
 ficheiros de propriedades.
+
+---
+
+## Marco 3 - 20/07/2026 - Implementação da API REST
+
+### Objetivo da sessão
+
+Adicionar uma API REST ao DevFlow Hub para expor as funcionalidades já
+implementadas na camada de serviços.
+
+### Funcionalidades implementadas
+
+- Criação dos DTOs utilizados pelo dashboard.
+- Criação do serviço de consulta e agregação do dashboard.
+- Criação do controller REST dos colaboradores.
+- Criação do controller REST dos projetos.
+- Criação do controller REST das tarefas.
+- Criação do controller REST dos programas internos.
+- Criação do controller REST do dashboard.
+- Implementação de endpoints CRUD.
+- Implementação dos endpoints do temporizador das tarefas.
+- Implementação do endpoint para concluir uma tarefa.
+- Criação de uma estrutura comum para erros da API.
+- Implementação do tratamento global das exceções.
+
+### Endpoints adicionados
+
+- `/api/collaborators`
+- `/api/projects`
+- `/api/tasks`
+- `/api/internal-programs`
+- `/api/dashboard`
+- `/api/tasks/{id}/start-timer`
+- `/api/tasks/{id}/pause-timer`
+- `/api/tasks/{id}/resume-timer`
+- `/api/tasks/{id}/total-time`
+- `/api/tasks/{id}/timer`
+- `/api/tasks/{id}/complete`
+
+### Problemas encontrados
+
+- O `DashboardController` dependia de um `DashboardService` que ainda não
+  estava presente no novo repositório.
+- A primeira compilação dos controllers terminou com erro porque essa classe
+  não podia ser encontrada.
+- Era necessário manter os controllers REST separados dos controllers MVC da
+  interface Thymeleaf.
+
+### Como resolvi
+
+- Localizei o `DashboardService` no código-fonte original.
+- Adicionei o serviço num commit separado.
+- Validei que o serviço utiliza os repositories e DTOs já presentes.
+- Mantive os controllers REST na pasta `controller`.
+- Não adicionei ainda os controllers MVC existentes em `web/controller`.
+- Compilei novamente o backend depois de adicionar a dependência em falta.
+- Mantive o tratamento global de erros num commit independente.
+
+### Ficheiros atualizados
+
+- `backend/src/main/java/com/devflowhub/backend/controller/CollaboratorController.java`
+- `backend/src/main/java/com/devflowhub/backend/controller/DashboardController.java`
+- `backend/src/main/java/com/devflowhub/backend/controller/InternalProgramController.java`
+- `backend/src/main/java/com/devflowhub/backend/controller/ProjectController.java`
+- `backend/src/main/java/com/devflowhub/backend/controller/TaskController.java`
+- `backend/src/main/java/com/devflowhub/backend/dto/DashboardProjectItem.java`
+- `backend/src/main/java/com/devflowhub/backend/dto/DashboardSummary.java`
+- `backend/src/main/java/com/devflowhub/backend/dto/DashboardTaskItem.java`
+- `backend/src/main/java/com/devflowhub/backend/exception/ApiError.java`
+- `backend/src/main/java/com/devflowhub/backend/exception/ApiExceptionHandler.java`
+- `backend/src/main/java/com/devflowhub/backend/service/DashboardService.java`
+- `README.md`
+- `LOG.md`
+
+### Estado atual
+
+- Os principais recursos possuem controllers REST.
+- As operações CRUD estão expostas através da API.
+- As operações do temporizador estão disponíveis através de endpoints
+  específicos.
+- O dashboard possui DTOs e serviço próprios.
+- As exceções da aplicação são tratadas globalmente.
+- O backend compila e pode ser empacotado através do Maven Wrapper.
+- O ficheiro `backend/target/devflow-hub.jar` foi gerado.
+- Na validação realizada em 20/07/2026, o JAR gerado possuía
+  `57 700 076` bytes.
+- A pasta `target` permaneceu fora do controlo de versões.
+
+### Validação ainda pendente
+
+- Executar a aplicação ligada ao PostgreSQL.
+- Testar os endpoints com Postman ou ferramenta equivalente.
+- Adicionar testes unitários dos services.
+- Adicionar testes dos controllers com MockMvc.
+- Validar os pedidos com Jakarta Validation.
+- Adicionar os controllers MVC e a interface Thymeleaf.
+- Validar o JAR numa máquina diferente.
+
+### Próxima etapa
+
+Criar a branch `test/backend-api` para adicionar testes unitários dos services
+e testes dos controllers REST com MockMvc. Depois, executar a aplicação ligada
+ao PostgreSQL e validar os endpoints através do Postman.
+
+### Estatísticas do Git
+
+Segundo as estatísticas do Git, a implementação da API REST adicionou
+**11 ficheiros** e **528 linhas**.
+
+A contagem inclui controllers REST, DTOs, tratamento de exceções e o serviço do
+dashboard. As alterações no README e no LOG são contabilizadas separadamente
+no commit documental.
