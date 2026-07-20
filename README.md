@@ -69,15 +69,21 @@ O histórico reorganizado não pretende alterar as datas reais de desenvolviment
 - Services de colaboradores, projetos, tarefas e programas internos implementados.
 - Temporizador das tarefas implementado.
 - Backend compilado com sucesso através do Maven Wrapper.
+- API REST para colaboradores, projetos, tarefas e programas internos implementada.
+- Endpoint de resumo do dashboard implementado.
+- Operações REST do temporizador implementadas.
+- Tratamento global dos erros da API implementado.
+- JAR executável gerado através do Maven Wrapper.
 
 Ainda estão pendentes:
 
-- controllers e endpoints REST;
-- tratamento global dos erros da API;
-- testes automatizados;
+- execução do backend ligado ao PostgreSQL;
+- validação dos endpoints REST com Postman ou ferramenta equivalente;
+- testes automatizados dos services e controllers;
+- validação dos pedidos com Jakarta Validation;
 - interface Thymeleaf;
 - frontend React;
-- validação do JAR final.
+- validação do JAR final numa instalação independente.
 
 ## Autora
 
@@ -137,7 +143,9 @@ A organização segue uma arquitetura por camadas:
 ```text
 backend/src/main/java/com/devflowhub/backend/
 ├── config/
+├── controller/
 ├── domain/
+├── dto/
 ├── entity/
 ├── exception/
 ├── repository/
@@ -148,11 +156,13 @@ backend/src/main/java/com/devflowhub/backend/
 ### Responsabilidades
 
 - `config`: configurações técnicas partilhadas;
+- `controller`: endpoints REST da aplicação;
 - `domain`: estados, prioridades e valores permitidos;
+- `dto`: objetos utilizados para transportar respostas específicas da API;
 - `entity`: entidades JPA associadas às tabelas PostgreSQL;
-- `exception`: exceções reutilizáveis da aplicação;
+- `exception`: exceções reutilizáveis e tratamento global de erros;
 - `repository`: acesso aos dados com Spring Data JPA;
-- `service`: regras de negócio da aplicação;
+- `service`: regras de negócio e consultas agregadas da aplicação;
 - `util`: funções comuns de normalização.
 
 ### Funcionalidades implementadas
@@ -177,3 +187,94 @@ cd backend
 ```
 
 O backend foi compilado com sucesso utilizando Java 21.
+
+## API REST
+
+O DevFlow Hub disponibiliza uma API REST para gerir os principais recursos da
+aplicação.
+
+### Endpoints principais
+
+#### Colaboradores
+
+```text
+GET    /api/collaborators
+GET    /api/collaborators/{id}
+POST   /api/collaborators
+PUT    /api/collaborators/{id}
+DELETE /api/collaborators/{id}
+```
+
+#### Projetos
+
+```text
+GET    /api/projects
+GET    /api/projects/{id}
+POST   /api/projects
+PUT    /api/projects/{id}
+DELETE /api/projects/{id}
+```
+
+#### Tarefas
+
+```text
+GET    /api/tasks
+GET    /api/tasks/{id}
+POST   /api/tasks
+PUT    /api/tasks/{id}
+DELETE /api/tasks/{id}
+```
+
+A API também disponibiliza operações específicas para o temporizador:
+
+```text
+POST /api/tasks/{id}/start-timer
+POST /api/tasks/{id}/pause-timer
+POST /api/tasks/{id}/resume-timer
+GET  /api/tasks/{id}/total-time
+GET  /api/tasks/{id}/timer
+POST /api/tasks/{id}/complete
+```
+
+#### Programas internos
+
+```text
+GET    /api/internal-programs
+GET    /api/internal-programs/{id}
+POST   /api/internal-programs
+PUT    /api/internal-programs/{id}
+DELETE /api/internal-programs/{id}
+```
+
+#### Dashboard
+
+```text
+GET /api/dashboard
+```
+
+O dashboard utiliza DTOs próprios para devolver um resumo dos projetos,
+tarefas e indicadores da aplicação.
+
+### Tratamento de erros
+
+A API possui tratamento global de exceções para:
+
+- recursos não encontrados;
+- operações inválidas;
+- erros de validação;
+- erros inesperados da aplicação.
+
+### Empacotamento
+
+O backend pode ser compilado e empacotado através do Maven Wrapper:
+
+```powershell
+cd backend
+.\mvnw.cmd clean package -DskipTests
+```
+
+O JAR executável é gerado em:
+
+```text
+backend/target/devflow-hub.jar
+```
