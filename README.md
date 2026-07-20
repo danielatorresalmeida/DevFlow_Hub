@@ -80,14 +80,18 @@ O histórico reorganizado não pretende alterar as datas reais de desenvolviment
 - Teste de arranque do contexto Spring Boot implementado.
 - Perfil de testes configurado com uma base H2 em memória.
 - Suite validada com 18 testes, sem falhas ou erros.
+- Backend executado com sucesso ligado a uma base PostgreSQL real.
+- Esquema PostgreSQL validado através de `spring.jpa.hibernate.ddl-auto=validate`.
+- Endpoints principais da API validados através de smoke tests automatizados.
+- CRUD de colaboradores validado com PostgreSQL.
+- Respostas HTTP `400` e `404` validadas.
+- Script PowerShell de smoke tests disponível em `scripts/smoke-test-api.ps1`.
 
 Ainda estão pendentes:
 
-- execução do backend ligado ao PostgreSQL;
-- validação dos endpoints REST com Postman ou ferramenta equivalente;
 - expansão da cobertura dos restantes controllers REST;
-- testes de integração dos endpoints com persistência;
-- validação dos pedidos com Jakarta Validation;
+- testes de integração automatizados dos endpoints com persistência PostgreSQL;
+- expansão dos testes de validação com Jakarta Validation;
 - interface Thymeleaf;
 - frontend React;
 - validação do JAR final numa instalação independente.
@@ -328,3 +332,100 @@ backend/src/test/resources/application-test.properties
 
 A base H2 é criada apenas em memória durante os testes e não substitui a
 validação final com PostgreSQL.
+
+## Smoke tests da API com PostgreSQL
+
+O repositório inclui um script PowerShell para validar a API REST com uma base
+de dados PostgreSQL local.
+
+O script está disponível em:
+
+```text
+scripts/smoke-test-api.ps1
+```
+
+### Pré-requisitos
+
+- Java 21;
+- PostgreSQL em execução localmente;
+- base de dados `devflow_hub` criada;
+- esquema da base de dados instalado;
+- porta `8080` disponível.
+
+### Iniciar o backend
+
+Num terminal PowerShell, a partir da raiz do repositório:
+
+```powershell
+Set-Location ".\backend"
+
+$env:DB_URL = "jdbc:postgresql://localhost:5432/devflow_hub"
+$env:DB_USERNAME = "postgres"
+
+$securePassword = Read-Host "Password do PostgreSQL" -AsSecureString
+$env:DB_PASSWORD = [System.Net.NetworkCredential]::new(
+    "",
+    $securePassword
+).Password
+
+$env:SHOW_SQL = "false"
+
+.\mvnw.cmd spring-boot:run
+```
+
+A password da base de dados não deve ser guardada no repositório.
+
+O backend deve terminar o arranque com uma mensagem semelhante a:
+
+```text
+Started BackendApplication
+```
+
+### Executar os smoke tests
+
+Num segundo terminal PowerShell, a partir da raiz do repositório:
+
+```powershell
+powershell.exe `
+    -NoProfile `
+    -ExecutionPolicy Bypass `
+    -File ".\scripts\smoke-test-api.ps1"
+```
+
+O script valida:
+
+- `GET /api/collaborators`;
+- `GET /api/projects`;
+- `GET /api/tasks`;
+- `GET /api/internal-programs`;
+- `GET /api/dashboard`;
+- presença dos principais campos do dashboard;
+- resposta HTTP `404` para um recurso inexistente;
+- resposta HTTP `400` para um pedido inválido;
+- criação de um colaborador;
+- consulta do colaborador criado;
+- atualização do colaborador sem reenvio da password;
+- ocultação da password nas respostas da API;
+- eliminação do colaborador temporário;
+- confirmação da eliminação através de uma resposta HTTP `404`;
+- limpeza automática dos dados temporários em caso de falha.
+
+Uma execução bem-sucedida termina com:
+
+```text
+All API smoke tests passed.
+```
+
+### Utilizar outro endereço da API
+
+O endereço da API pode ser alterado através do parâmetro `BaseUrl`:
+
+```powershell
+powershell.exe `
+    -NoProfile `
+    -ExecutionPolicy Bypass `
+    -File ".\scripts\smoke-test-api.ps1" `
+    -BaseUrl "http://localhost:8080"
+```
+
+O script devolve um código de saída diferente de zero quando algum teste falha.
