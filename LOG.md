@@ -439,3 +439,138 @@ Segundo as estatísticas do Git, a implementação da API REST adicionou
 A contagem inclui controllers REST, DTOs, tratamento de exceções e o serviço do
 dashboard. As alterações no README e no LOG são contabilizadas separadamente
 no commit documental.
+
+---
+
+## Marco 4 - 20/07/2026 - Testes automatizados do backend
+
+### Objetivo da sessão
+
+Adicionar testes automatizados para validar as principais regras de negócio,
+o controller REST de tarefas e o arranque do contexto Spring Boot.
+
+### Testes implementados
+
+- Testes dos valores permitidos da camada de domínio.
+- Teste da normalização comum de texto.
+- Testes do service de colaboradores.
+- Testes do service de projetos.
+- Testes do service de programas internos.
+- Teste do service do dashboard.
+- Testes do service de tarefas.
+- Testes das operações temporais das tarefas.
+- Testes MockMvc do controller de tarefas.
+- Teste de arranque do contexto Spring Boot.
+- Configuração de uma base H2 em memória para o perfil `test`.
+
+### Componentes validados
+
+- `DomainValues`
+- `TextNormalizer`
+- `CollaboratorService`
+- `ProjectService`
+- `InternalProgramService`
+- `DashboardService`
+- `TaskService`
+- `TaskController`
+- configuração Spring Boot;
+- repositories Spring Data JPA;
+- ligação JPA à base H2 em memória.
+
+### Problemas encontrados
+
+- Inicialmente, a branch não continha ficheiros de teste.
+- O Maven indicava que não existiam testes para executar.
+- Os testes do projeto original estavam misturados entre API REST, services,
+  interface MVC e segurança.
+- Os testes MVC e de segurança dependiam de componentes que ainda não tinham
+  sido adicionados ao novo repositório.
+- O contexto Spring apresentou um aviso porque a pasta de templates Thymeleaf
+  ainda não existe.
+- O Mockito apresentou avisos sobre o carregamento dinâmico do Java Agent em
+  versões futuras do Java.
+
+### Como resolvi
+
+- Adicionei os testes progressivamente e em commits separados.
+- Mantive fora desta branch os testes da interface MVC e do interceptor de
+  autenticação.
+- Executei cada grupo de testes antes do respetivo commit.
+- Configurei o perfil `test` com uma base H2 em memória.
+- Adicionei um teste de contexto com `@SpringBootTest`.
+- Executei a suite completa através do Maven Wrapper.
+- Confirmei que os avisos do Thymeleaf e do Mockito não representam falhas
+  nesta etapa.
+
+### Ficheiros adicionados e atualizados
+
+- `backend/src/test/java/com/devflowhub/backend/BackendApplicationTests.java`
+- `backend/src/test/java/com/devflowhub/backend/controller/TaskControllerTest.java`
+- `backend/src/test/java/com/devflowhub/backend/domain/DomainValuesTest.java`
+- `backend/src/test/java/com/devflowhub/backend/service/CollaboratorServiceTest.java`
+- `backend/src/test/java/com/devflowhub/backend/service/DashboardServiceTest.java`
+- `backend/src/test/java/com/devflowhub/backend/service/InternalProgramServiceTest.java`
+- `backend/src/test/java/com/devflowhub/backend/service/ProjectServiceTest.java`
+- `backend/src/test/java/com/devflowhub/backend/service/TaskServiceTest.java`
+- `backend/src/test/java/com/devflowhub/backend/util/TextNormalizerTest.java`
+- `backend/src/test/resources/application-test.properties`
+- `README.md`
+- `LOG.md`
+
+### Resultado da validação
+
+A suite completa foi executada com:
+
+```powershell
+.\mvnw.cmd clean test
+```
+
+Resultado:
+
+```text
+Tests run: 18
+Failures: 0
+Errors: 0
+Skipped: 0
+BUILD SUCCESS
+```
+
+O teste de contexto confirmou:
+
+- perfil `test` ativo;
+- ligação à base `jdbc:h2:mem:devflow_hub_test`;
+- quatro repositories JPA encontrados;
+- inicialização do `EntityManagerFactory`;
+- arranque completo do contexto Spring Boot.
+
+### Estado atual
+
+- As principais regras de negócio possuem testes unitários.
+- A lógica temporal das tarefas possui testes automatizados.
+- O controller de tarefas possui testes MockMvc.
+- O contexto Spring Boot inicia corretamente com H2.
+- A suite completa possui 18 testes.
+- Todos os testes passaram sem falhas ou erros.
+
+### Validação ainda pendente
+
+- Adicionar testes dos restantes controllers REST.
+- Adicionar testes de persistência dos repositories.
+- Executar testes de integração com PostgreSQL.
+- Validar os endpoints através do Postman.
+- Adicionar os testes MVC quando a interface Thymeleaf for integrada.
+- Resolver preventivamente o aviso futuro do Java Agent do Mockito.
+
+### Próxima etapa
+
+Executar o backend ligado ao PostgreSQL, validar o esquema com
+`ddl-auto=validate` e testar os endpoints REST através do Postman.
+
+### Estatísticas do Git
+
+Segundo as estatísticas do Git, a implementação dos testes adicionou
+**10 ficheiros** e **579 linhas**.
+
+A contagem inclui testes unitários, testes MockMvc, o teste de contexto Spring
+e a configuração H2. As alterações no README e no LOG são contabilizadas
+separadamente no commit documental.

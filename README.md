@@ -45,7 +45,8 @@ O histórico reorganizado não pretende alterar as datas reais de desenvolviment
 - JUnit 5
 - Mockito
 - MockMvc
-- H2 para testes isolados
+- Spring Boot Test
+- H2 para testes de integração
 
 ## Estratégia de branches
 
@@ -74,12 +75,18 @@ O histórico reorganizado não pretende alterar as datas reais de desenvolviment
 - Operações REST do temporizador implementadas.
 - Tratamento global dos erros da API implementado.
 - JAR executável gerado através do Maven Wrapper.
+- Testes unitários do domínio, utilitários e services implementados.
+- Testes MockMvc do controller de tarefas implementados.
+- Teste de arranque do contexto Spring Boot implementado.
+- Perfil de testes configurado com uma base H2 em memória.
+- Suite validada com 18 testes, sem falhas ou erros.
 
 Ainda estão pendentes:
 
 - execução do backend ligado ao PostgreSQL;
 - validação dos endpoints REST com Postman ou ferramenta equivalente;
-- testes automatizados dos services e controllers;
+- expansão da cobertura dos restantes controllers REST;
+- testes de integração dos endpoints com persistência;
 - validação dos pedidos com Jakarta Validation;
 - interface Thymeleaf;
 - frontend React;
@@ -278,3 +285,46 @@ O JAR executável é gerado em:
 ```text
 backend/target/devflow-hub.jar
 ```
+
+## Testes automatizados
+
+O backend utiliza JUnit 5, Mockito, MockMvc, Spring Boot Test e H2.
+
+Os testes atuais abrangem:
+
+- valores e regras da camada de domínio;
+- normalização de texto;
+- regras dos colaboradores;
+- regras dos projetos;
+- regras dos programas internos;
+- agregação de dados do dashboard;
+- estados e temporizador das tarefas;
+- endpoints do controller de tarefas;
+- arranque completo do contexto Spring Boot;
+- configuração JPA com uma base H2 em memória.
+
+A suite completa pode ser executada com:
+
+```powershell
+cd backend
+.\mvnw.cmd clean test
+```
+
+Na validação realizada em 20/07/2026, foram executados:
+
+```text
+Tests run: 18
+Failures: 0
+Errors: 0
+Skipped: 0
+BUILD SUCCESS
+```
+
+O perfil de testes utiliza:
+
+```text
+backend/src/test/resources/application-test.properties
+```
+
+A base H2 é criada apenas em memória durante os testes e não substitui a
+validação final com PostgreSQL.
