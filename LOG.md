@@ -1,4 +1,4 @@
-﻿# DevFlow Hub - Registo de Desenvolvimento
+# DevFlow Hub - Registo de Desenvolvimento
 
 ## Nota sobre a reorganização
 
@@ -718,3 +718,92 @@ os dados antigos com problemas de codificação.
 
 As estatísticas deste marco devem ser registadas depois da criação do commit,
 para refletirem os valores reais apresentados pelo Git.
+
+---
+
+## Marco 6 - 21/07/2026 - Validação CRUD completa com PostgreSQL
+
+### Objetivo
+
+Expandir o smoke test da API para validar os principais recursos com
+persistência PostgreSQL real, incluindo relações, regras de negócio e o ciclo
+completo do temporizador das tarefas.
+
+### Validação realizada
+
+Foram validados:
+
+- CRUD de colaboradores, projetos, tarefas e programas internos;
+- relações entre colaboradores, gestores, projetos e responsáveis;
+- estados e prioridades permitidos;
+- validação das datas iniciais e finais;
+- campos obrigatórios e referências inexistentes;
+- proteção dos campos internos do temporizador durante a criação;
+- início, pausa, retoma e conclusão do temporizador;
+- acumulação do tempo de várias sessões;
+- proteção do estado durante um temporizador ativo;
+- rejeição da pausa de um temporizador inativo;
+- rejeição do reinício de uma tarefa concluída;
+- respostas HTTP `400` e `404`;
+- eliminação e limpeza dos recursos temporários.
+
+### Smoke test automatizado
+
+O ficheiro `scripts/smoke-test-api.ps1` foi expandido para criar e validar
+temporariamente:
+
+- um colaborador;
+- um projeto;
+- um programa interno;
+- uma tarefa.
+
+Os recursos são eliminados por ordem de dependência:
+
+1. tarefa;
+2. programa interno;
+3. projeto;
+4. colaborador.
+
+O bloco `finally` também remove os recursos temporários caso ocorra uma falha
+durante a execução.
+
+### Correção no PowerShell
+
+A conversão dos payloads JSON para UTF-8 devolvia o array de bytes elemento por
+elemento através do pipeline.
+
+A função foi corrigida com `Write-Output -NoEnumerate`, garantindo que o
+`Invoke-RestMethod` recebe o array completo.
+
+### Resultado
+
+- todos os testes PostgreSQL da API passaram;
+- código de saída: `0`;
+- as contagens regressaram aos valores iniciais;
+- nenhum dado temporário permaneceu na base de dados;
+- nenhuma credencial real foi adicionada ao repositório.
+
+Mensagem final:
+
+```text
+All PostgreSQL API smoke tests passed.
+```
+
+### Ficheiros atualizados
+
+- `scripts/smoke-test-api.ps1`
+- `README.md`
+- `LOG.md`
+
+### Trabalho pendente
+
+- tratar `HttpMessageNotReadableException` para JSON malformado;
+- corrigir os registos antigos com caracteres corrompidos;
+- implementar armazenamento seguro das passwords;
+- criar testes Maven com uma instância PostgreSQL dedicada;
+- validar o JAR final numa instalação independente.
+
+### Próxima etapa
+
+Rever o diff final, criar o commit da branch
+`test/postgresql-resource-crud` e abrir um pull request para `develop`.
