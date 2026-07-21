@@ -1,4 +1,4 @@
-﻿# DevFlow Hub
+# DevFlow Hub
 
 DevFlow Hub é uma aplicação web académica para gestão de colaboradores, projetos, tarefas, tempo de trabalho e programas internos.
 
@@ -83,15 +83,20 @@ O histórico reorganizado não pretende alterar as datas reais de desenvolviment
 - Backend executado com sucesso ligado a uma base PostgreSQL real.
 - Esquema PostgreSQL validado através de `spring.jpa.hibernate.ddl-auto=validate`.
 - Endpoints principais da API validados através de smoke tests automatizados.
-- CRUD de colaboradores validado com PostgreSQL.
+- CRUD de colaboradores, projetos, tarefas e programas internos validado com PostgreSQL.
+- Relações entre colaboradores, projetos, tarefas e gestores validadas.
+- Ciclo completo do temporizador das tarefas validado.
+- Regras de estado, prioridade, datas e referências inexistentes validadas.
 - Respostas HTTP `400` e `404` validadas.
+- Limpeza automática e reposição das contagens iniciais validadas.
 - Script PowerShell de smoke tests disponível em `scripts/smoke-test-api.ps1`.
 
 Ainda estão pendentes:
 
-- expansão da cobertura dos restantes controllers REST;
-- testes de integração automatizados dos endpoints com persistência PostgreSQL;
-- expansão dos testes de validação com Jakarta Validation;
+- testes de integração executados pelo Maven com uma instância PostgreSQL dedicada;
+- tratamento estruturado de pedidos com JSON malformado;
+- correção dos registos antigos com caracteres corrompidos;
+- armazenamento seguro das passwords antes da implementação da autenticação;
 - interface Thymeleaf;
 - frontend React;
 - validação do JAR final numa instalação independente.
@@ -394,26 +399,29 @@ powershell.exe `
 
 O script valida:
 
-- `GET /api/collaborators`;
-- `GET /api/projects`;
-- `GET /api/tasks`;
-- `GET /api/internal-programs`;
-- `GET /api/dashboard`;
-- presença dos principais campos do dashboard;
-- resposta HTTP `404` para um recurso inexistente;
-- resposta HTTP `400` para um pedido inválido;
-- criação de um colaborador;
-- consulta do colaborador criado;
-- atualização do colaborador sem reenvio da password;
-- ocultação da password nas respostas da API;
-- eliminação do colaborador temporário;
-- confirmação da eliminação através de uma resposta HTTP `404`;
-- limpeza automática dos dados temporários em caso de falha.
+- os endpoints principais de colaboradores, projetos, tarefas, programas internos e dashboard;
+- a presença dos principais campos do dashboard;
+- o CRUD completo de colaboradores, projetos, tarefas e programas internos;
+- a ocultação da password nas respostas da API;
+- as relações de gestor, projeto e responsável;
+- estados e prioridades permitidos;
+- datas iniciais e finais;
+- campos obrigatórios e referências inexistentes;
+- a proteção dos campos internos do temporizador durante a criação;
+- o início, pausa, retoma e conclusão do temporizador;
+- a acumulação do tempo de diferentes sessões;
+- a proteção do estado enquanto o temporizador está ativo;
+- a rejeição da pausa de um temporizador inativo;
+- a rejeição do reinício do temporizador de uma tarefa concluída;
+- respostas estruturadas HTTP `400` e `404`;
+- a eliminação dos recursos temporários por ordem de dependência;
+- a reposição das contagens iniciais após a execução;
+- a limpeza automática dos dados temporários em caso de falha.
 
 Uma execução bem-sucedida termina com:
 
 ```text
-All API smoke tests passed.
+All PostgreSQL API smoke tests passed.
 ```
 
 ### Utilizar outro endereço da API
