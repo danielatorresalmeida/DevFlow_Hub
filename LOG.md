@@ -574,3 +574,147 @@ Segundo as estatísticas do Git, a implementação dos testes adicionou
 A contagem inclui testes unitários, testes MockMvc, o teste de contexto Spring
 e a configuração H2. As alterações no README e no LOG são contabilizadas
 separadamente no commit documental.
+
+---
+
+## Marco 5 - 20/07/2026 - Validação da API com PostgreSQL
+
+### Objetivo da sessão
+
+Validar o backend DevFlow Hub ligado a uma base de dados PostgreSQL local,
+confirmar a compatibilidade entre as entidades JPA e o esquema existente e
+criar um smoke test reproduzível para os principais endpoints REST.
+
+### Validações realizadas
+
+- Ligação ao PostgreSQL através do JDBC.
+- Inicialização do pool de ligações HikariCP.
+- Deteção do PostgreSQL 18.3 e do dialecto `PostgreSQLDialect`.
+- Validação do esquema através de
+  `spring.jpa.hibernate.ddl-auto=validate`.
+- Inicialização do `EntityManagerFactory`.
+- Arranque do Tomcat na porta `8080`.
+- Validação dos endpoints:
+  - `GET /api/collaborators`;
+  - `GET /api/projects`;
+  - `GET /api/tasks`;
+  - `GET /api/internal-programs`;
+  - `GET /api/dashboard`.
+- Validação da presença dos principais campos do dashboard.
+- Validação de um recurso inexistente com resposta HTTP `404`.
+- Validação de um pedido inválido com resposta HTTP `400`.
+- Validação do CRUD de colaboradores:
+  - criação;
+  - consulta por ID;
+  - atualização;
+  - eliminação.
+- Confirmação de que a password é aceite nos pedidos de criação, mas não é
+  devolvida nas respostas da API.
+- Confirmação de que uma atualização sem password preserva a password
+  existente.
+- Confirmação da remoção do colaborador temporário após o teste.
+- Criação de um script PowerShell para repetir automaticamente as validações.
+
+### Problemas encontrados
+
+- As variáveis de ambiente da base de dados tinham de ser definidas na mesma
+  sessão PowerShell utilizada para iniciar o backend.
+- Um pedido de criação de colaborador sem password devolveu corretamente
+  HTTP `400`.
+- O `Invoke-WebRequest` apresentou um aviso de segurança ao processar a
+  resposta do pedido `DELETE`.
+- Alguns fragmentos de comandos colados no terminal criaram ficheiros vazios
+  e não rastreados na raiz do repositório.
+- A primeira versão do script de smoke tests continha erros de sintaxe
+  causados pela formatação do conteúdo copiado.
+- Foram identificados registos antigos com caracteres portugueses corrompidos,
+  como `MÃ³dulo`, `GestÃ£o` e `FormaÃ§Ã£o`.
+
+### Como resolvi
+
+- Defini `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` antes de executar o Maven
+  Wrapper na mesma sessão PowerShell.
+- Consultei a resposta JSON do erro para confirmar a regra obrigatória da
+  password.
+- Confirmei a eliminação do colaborador através de uma consulta posterior que
+  devolveu HTTP `404`.
+- Removi apenas os ficheiros vazios criados acidentalmente e confirmei que o
+  Maven Wrapper verdadeiro permaneceu em `backend/mvnw.cmd`.
+- Corrigi e validei a sintaxe do script PowerShell.
+- Adicionei limpeza automática do colaborador temporário através de um bloco
+  `finally`.
+- Mantive a correção dos dados antigos com problemas de codificação como uma
+  tarefa separada, para não misturar alterações de dados com a validação da
+  API.
+
+### Ficheiros adicionados e atualizados
+
+- `scripts/smoke-test-api.ps1`
+- `README.md`
+- `LOG.md`
+
+### Resultado da validação
+
+O backend foi executado com sucesso utilizando PostgreSQL real.
+
+```text
+Database: PostgreSQL 18.3
+API port: 8080
+Schema validation: successful
+Main GET endpoints: successful
+Dashboard validation: successful
+Collaborator CRUD: successful
+Error handling 400/404: successful
+Temporary data cleanup: successful
+```
+
+O smoke test foi executado com:
+
+```powershell
+powershell.exe `
+    -NoProfile `
+    -ExecutionPolicy Bypass `
+    -File ".\scripts\smoke-test-api.ps1"
+```
+
+Resultado final:
+
+```text
+All API smoke tests passed.
+```
+
+### Estado atual
+
+- O backend inicia corretamente ligado ao PostgreSQL.
+- As entidades JPA são compatíveis com o esquema existente.
+- Os cinco endpoints principais respondem corretamente.
+- O dashboard devolve os indicadores esperados.
+- O tratamento global de erros devolve respostas estruturadas para HTTP
+  `400` e `404`.
+- O CRUD de colaboradores foi validado com persistência real.
+- A password não é exposta nas respostas JSON.
+- O script de smoke tests remove os dados temporários criados durante a
+  execução.
+- Nenhuma credencial real foi adicionada ao repositório.
+
+### Validação ainda pendente
+
+- Expandir os smoke tests para projetos, tarefas e programas internos.
+- Validar os endpoints do temporizador com PostgreSQL.
+- Adicionar testes automatizados de integração com persistência PostgreSQL.
+- Expandir os testes dos restantes controllers REST.
+- Corrigir os registos antigos com caracteres corrompidos.
+- Avaliar o armazenamento seguro das passwords antes de implementar
+  autenticação para utilização real.
+- Validar o JAR final numa instalação independente.
+
+### Próxima etapa
+
+Expandir a validação da API para o CRUD de projetos, tarefas e programas
+internos, incluindo as operações do temporizador. Depois, tratar separadamente
+os dados antigos com problemas de codificação.
+
+### Estatísticas do Git
+
+As estatísticas deste marco devem ser registadas depois da criação do commit,
+para refletirem os valores reais apresentados pelo Git.
