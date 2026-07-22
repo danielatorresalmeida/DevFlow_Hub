@@ -98,6 +98,99 @@ function Assert-HttpError {
     }
 }
 
+function Assert-MalformedJsonError {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Uri
+    )
+
+    $requestFile = Join-Path `
+        $env:TEMP `
+        "devflow-smoke-malformed-request-$([guid]::NewGuid()).json"
+
+    $responseFile = Join-Path `
+        $env:TEMP `
+        "devflow-smoke-malformed-response-$([guid]::NewGuid()).json"
+
+    try {
+        $malformedJson = '{"title":"Broken JSON","status":"PENDING","priority":'
+
+        [System.IO.File]::WriteAllText(
+            $requestFile,
+            $malformedJson,
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        $statusCode = curl.exe `
+            -sS `
+            -o $responseFile `
+            -w "%{http_code}" `
+            -X POST `
+            $Uri `
+            -H "Content-Type: application/json; charset=utf-8" `
+            --data-binary "@$requestFile"
+
+        $curlExitCode = $LASTEXITCODE
+
+        if ($curlExitCode -ne 0) {
+            throw "curl failed with exit code $curlExitCode while testing malformed JSON."
+        }
+
+        if (-not (Test-Path $responseFile)) {
+            throw "The malformed JSON request did not produce a response file."
+        }
+
+        $responseBody = [System.IO.File]::ReadAllText($responseFile)
+
+        if ([int]$statusCode -ne 400) {
+            throw "Expected HTTP 400 for malformed JSON, but received HTTP $statusCode. Response: $responseBody"
+        }
+
+        try {
+            $responseJson = $responseBody |
+                ConvertFrom-Json -ErrorAction Stop
+        }
+        catch {
+            throw "The malformed JSON error response is not valid JSON. Response: $responseBody"
+        }
+
+        $responseProperties = @(
+            $responseJson.PSObject.Properties.Name
+        )
+
+        if ([int]$responseJson.status -ne 400) {
+            throw "Expected response status 400 for malformed JSON. Response: $responseBody"
+        }
+
+        if ($responseJson.message -ne "The request body contains invalid JSON.") {
+            throw "Unexpected malformed JSON error message. Response: $responseBody"
+        }
+
+        if ($responseProperties -notcontains "validationErrors") {
+            throw "The malformed JSON response does not contain validationErrors. Response: $responseBody"
+        }
+
+        foreach ($forbiddenProperty in @(
+            "trace",
+            "error",
+            "exception",
+            "path"
+        )) {
+            if ($responseProperties -contains $forbiddenProperty) {
+                throw "The malformed JSON response exposes '$forbiddenProperty'. Response: $responseBody"
+            }
+        }
+
+        Write-Pass "POST /api/tasks rejected malformed JSON without exposing internal details"
+    }
+    finally {
+        Remove-Item `
+            $requestFile, $responseFile `
+            -Force `
+            -ErrorAction SilentlyContinue
+    }
+}
+
 function Remove-TemporaryResource {
     param([string]$Label, [string]$Uri)
     try {
@@ -345,6 +438,8 @@ try {
     Assert-HttpError -Method "POST" -Uri "$BaseUrl/api/tasks" -ExpectedStatus 400 -Body (@{
         title = "   "; status = "PENDING"; priority = "MEDIUM"; projectId = $createdProjectId; assigneeId = $createdCollaboratorId
     } | ConvertTo-Json -Compress) -ExpectedMessage "The submitted data is invalid." -ExpectedValidationField "title" -ExpectedValidationMessage "Title is required."
+
+    Assert-MalformedJsonError -Uri "$BaseUrl/api/tasks"
 
     # Delete temporary resources in dependency order.
     Invoke-RestMethod -Method Delete -Uri "$BaseUrl/api/tasks/$createdTaskId" | Out-Null

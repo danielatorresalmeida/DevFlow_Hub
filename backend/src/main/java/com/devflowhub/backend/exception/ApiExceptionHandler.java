@@ -3,6 +3,7 @@ package com.devflowhub.backend.exception;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -32,11 +33,28 @@ public class ApiExceptionHandler {
                 errors.putIfAbsent(error.getField(), error.getDefaultMessage())
         );
 
-        return buildResponse(HttpStatus.BAD_REQUEST, "The submitted data is invalid.", errors);
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "The submitted data is invalid.",
+                errors
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleMalformedJson(
+            HttpMessageNotReadableException exception
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "The request body contains invalid JSON.",
+                Map.of()
+        );
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException exception) {
+    public ResponseEntity<ApiError> handleDataIntegrity(
+            DataIntegrityViolationException exception
+    ) {
         return buildResponse(
                 HttpStatus.CONFLICT,
                 "The operation could not be completed because the data conflicts with an existing record.",
