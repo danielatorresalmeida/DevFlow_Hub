@@ -883,3 +883,12 @@ All PostgreSQL API smoke tests passed.
 
 Rever o diff final, criar o commit da branch
 `fix/api-malformed-json-errors` e abrir um pull request para `develop`.
+
+## Marco 8 — Diagnóstico de encoding no PostgreSQL e Windows PowerShell
+
+- A base de dados devflow_hub foi confirmada com server_encoding, client_encoding e encoding da base em UTF8.
+- A inspeção hexadecimal confirmou que valores como Gestão, página e Práticas estão armazenados com bytes UTF-8 corretos.
+- A resposta JSON bruta da API também apresentou corretamente Módulo, Gestão e outros caracteres portugueses.
+- As sequências visíveis como GestÃ£o no psql e no Invoke-RestMethod do Windows PowerShell 5.1 resultam da interpretação incorreta da saída UTF-8 pelo terminal, e não de corrupção dos dados.
+- Nenhum UPDATE, alteração de schema ou recriação da base de dados foi necessária.
+- Para validação fiável no Windows PowerShell 5.1, a resposta pode ser gravada com curl.exe e lida explicitamente através de ReadAllText(..., UTF8); PowerShell 7 também evita este problema de apresentação.
