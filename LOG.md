@@ -892,3 +892,110 @@ Rever o diff final, criar o commit da branch
 - As sequências visíveis como GestÃ£o no psql e no Invoke-RestMethod do Windows PowerShell 5.1 resultam da interpretação incorreta da saída UTF-8 pelo terminal, e não de corrupção dos dados.
 - Nenhum UPDATE, alteração de schema ou recriação da base de dados foi necessária.
 - Para validação fiável no Windows PowerShell 5.1, a resposta pode ser gravada com curl.exe e lida explicitamente através de ReadAllText(..., UTF8); PowerShell 7 também evita este problema de apresentação.
+
+## Marco 9 — 22/07/2026 — Login e alteração de password
+
+### Objetivo
+
+Foi criado o primeiro fluxo de autenticação do backend sem ativar ainda uma
+sessão HTTP ou JWT.
+
+Foram disponibilizados:
+
+```text
+POST /api/auth/login
+PUT  /api/auth/change-password
+```
+
+### Implementação
+
+A autenticação utiliza o `PasswordEncoder` já configurado e compara passwords
+através de `matches()`.
+
+Foram adicionados DTOs próprios para:
+
+- pedido de login;
+- pedido de alteração de password;
+- resposta pública do colaborador autenticado.
+
+A resposta de login contém apenas:
+
+- identificador;
+- nome;
+- email;
+- função;
+- estado ativo.
+
+O hash da password nunca é devolvido.
+
+Credenciais inválidas, colaboradores inexistentes e colaboradores inativos
+devolvem a mesma mensagem genérica com HTTP `401`:
+
+```text
+Invalid email or password.
+```
+
+A alteração de password:
+
+- exige a password atual;
+- rejeita a reutilização da password atual;
+- valida uma nova password entre 8 e 64 caracteres;
+- guarda apenas o novo hash.
+
+### Testes
+
+Foram adicionados testes de service e controller para:
+
+- login válido;
+- credenciais inválidas;
+- resposta sem password;
+- HTTP `401` genérico;
+- alteração de password;
+- rejeição da reutilização da password atual;
+- validação do payload;
+- resposta HTTP `204`.
+
+Resultado da suite Maven:
+
+```text
+Tests run: 32
+Failures: 0
+Errors: 0
+Skipped: 0
+BUILD SUCCESS
+```
+
+A validação com PostgreSQL real confirmou:
+
+- login com a password inicial;
+- alteração da password;
+- rejeição da password antiga com HTTP `401`;
+- login com a nova password;
+- eliminação do colaborador temporário.
+
+O smoke test PostgreSQL foi ampliado para manter estes cenários como regressão.
+
+### Limitação atual
+
+O endpoint de login apenas valida credenciais e devolve dados públicos. Ainda
+não cria sessão, cookie ou token e ainda não protege os restantes endpoints.
+
+### Ficheiros principais
+
+- `backend/src/main/java/com/devflowhub/backend/controller/AuthController.java`
+- `backend/src/main/java/com/devflowhub/backend/service/AuthenticationService.java`
+- `backend/src/main/java/com/devflowhub/backend/dto/LoginRequest.java`
+- `backend/src/main/java/com/devflowhub/backend/dto/ChangePasswordRequest.java`
+- `backend/src/main/java/com/devflowhub/backend/dto/AuthenticatedCollaboratorResponse.java`
+- `backend/src/main/java/com/devflowhub/backend/exception/AuthenticationFailedException.java`
+- `backend/src/main/java/com/devflowhub/backend/exception/ApiExceptionHandler.java`
+- `backend/src/test/java/com/devflowhub/backend/controller/AuthControllerTest.java`
+- `backend/src/test/java/com/devflowhub/backend/service/AuthenticationServiceTest.java`
+- `scripts/smoke-test-api.ps1`
+- `README.md`
+- `LOG.md`
+
+### Próxima etapa
+
+Definir e implementar autenticação persistente com sessão HTTP ou JWT e
+proteger os endpoints que exigem um colaborador autenticado.

@@ -20,6 +20,13 @@ public class ApiExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), Map.of());
     }
 
+    @ExceptionHandler(AuthenticationFailedException.class)
+    public ResponseEntity<ApiError> handleAuthenticationFailed(
+            AuthenticationFailedException exception
+    ) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, exception.getMessage(), Map.of());
+    }
+
     @ExceptionHandler(InvalidOperationException.class)
     public ResponseEntity<ApiError> handleInvalidOperation(InvalidOperationException exception) {
         return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), Map.of());
