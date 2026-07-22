@@ -311,3 +311,21 @@ Nunca adicionar ao Git:
 A password apresentada nos dados de demonstração pertence apenas ao
 ambiente académico da aplicação e não corresponde à password
 administrativa do PostgreSQL.
+
+============================================================
+NOTA SOBRE UTF-8 NO WINDOWS POWERSHELL 5.1
+============================================================
+
+A base de dados pode estar corretamente configurada em UTF-8 e, ainda assim,
+o psql apresentar textos como GestÃ£o no Windows PowerShell 5.1.
+
+Isto é um problema de apresentação do terminal, não uma prova de corrupção.
+Antes de alterar dados, confirme:
+
+- SHOW server_encoding; deve devolver UTF8.
+- SHOW client_encoding; deve devolver UTF8.
+- A resposta JSON gravada com curl.exe deve ser lida explicitamente como UTF-8.
+- Uma inspeção hexadecimal com encode(convert_to(campo, 'UTF8'), 'hex')
+  permite confirmar os bytes reais armazenados.
+
+Não execute UPDATE para corrigir acentos apenas com base na apresentação do psql.
