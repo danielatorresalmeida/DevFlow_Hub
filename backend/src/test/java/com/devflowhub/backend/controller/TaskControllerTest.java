@@ -70,4 +70,26 @@ class TaskControllerTest {
                 .andExpect(jsonPath("$.message")
                         .value("A completed task cannot restart its timer."));
     }
+
+        @Test
+    void malformedJsonReturnsStructuredHttp400WithoutInternalDetails() throws Exception {
+        mockMvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Broken JSON",
+                                  "status": "PENDING",
+                                  "priority":
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message")
+                        .value("The request body contains invalid JSON."))
+                .andExpect(jsonPath("$.validationErrors").isEmpty())
+                .andExpect(jsonPath("$.trace").doesNotExist())
+                .andExpect(jsonPath("$.error").doesNotExist())
+                .andExpect(jsonPath("$.exception").doesNotExist())
+                .andExpect(jsonPath("$.path").doesNotExist());
+    }
 }

@@ -807,3 +807,79 @@ All PostgreSQL API smoke tests passed.
 
 Rever o diff final, criar o commit da branch
 `test/postgresql-resource-crud` e abrir um pull request para `develop`.
+
+## Marco 7 - 22/07/2026 - Tratamento seguro de JSON malformado
+
+### Problema identificado
+
+Os pedidos com JSON malformado não eram tratados pelo `ApiExceptionHandler`.
+
+O Spring devolvia HTTP `400`, mas a resposta padrão podia expor:
+
+- stack trace;
+- nomes de classes internas;
+- detalhes do parser JSON;
+- campos como `trace`, `error`, `exception` e `path`.
+
+### Implementação
+
+Foi adicionado tratamento específico para
+`HttpMessageNotReadableException`.
+
+A API passa a devolver uma resposta baseada em `ApiError`:
+
+```json
+{
+  "timestamp": "...",
+  "status": 400,
+  "message": "The request body contains invalid JSON.",
+  "validationErrors": {}
+}
+```
+
+Também foram adicionados:
+
+- um teste MockMvc para JSON malformado;
+- validação da mensagem e do estado HTTP;
+- verificação da ausência de detalhes internos;
+- um cenário equivalente no smoke test PostgreSQL;
+- limpeza automática dos ficheiros temporários utilizados pelo teste.
+
+### Validação realizada
+
+Foram confirmados:
+
+- `TaskControllerTest`: 3 testes sem falhas;
+- suite Maven completa: 19 testes sem falhas ou erros;
+- resposta real HTTP `400` através da porta `8080`;
+- ausência de `trace`, `error`, `exception` e `path`;
+- smoke test completo com PostgreSQL;
+- código de saída do smoke test: `0`;
+- reposição das contagens iniciais da base de dados.
+
+Mensagem final:
+
+```text
+All PostgreSQL API smoke tests passed.
+```
+
+### Ficheiros atualizados
+
+- `backend/src/main/java/com/devflowhub/backend/exception/ApiExceptionHandler.java`
+- `backend/src/test/java/com/devflowhub/backend/controller/TaskControllerTest.java`
+- `scripts/smoke-test-api.ps1`
+- `README.md`
+- `LOG.md`
+
+### Trabalho pendente
+
+- corrigir os registos antigos com caracteres corrompidos;
+- implementar armazenamento seguro das passwords;
+- criar testes Maven com uma instância PostgreSQL dedicada;
+- concluir a interface Thymeleaf e o frontend React;
+- validar o JAR final numa instalação independente.
+
+### Próxima etapa
+
+Rever o diff final, criar o commit da branch
+`fix/api-malformed-json-errors` e abrir um pull request para `develop`.

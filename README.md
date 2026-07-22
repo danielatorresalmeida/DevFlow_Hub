@@ -79,7 +79,7 @@ O histórico reorganizado não pretende alterar as datas reais de desenvolviment
 - Testes MockMvc do controller de tarefas implementados.
 - Teste de arranque do contexto Spring Boot implementado.
 - Perfil de testes configurado com uma base H2 em memória.
-- Suite validada com 18 testes, sem falhas ou erros.
+- Suite validada com 19 testes, sem falhas ou erros.
 - Backend executado com sucesso ligado a uma base PostgreSQL real.
 - Esquema PostgreSQL validado através de `spring.jpa.hibernate.ddl-auto=validate`.
 - Endpoints principais da API validados através de smoke tests automatizados.
@@ -88,13 +88,13 @@ O histórico reorganizado não pretende alterar as datas reais de desenvolviment
 - Ciclo completo do temporizador das tarefas validado.
 - Regras de estado, prioridade, datas e referências inexistentes validadas.
 - Respostas HTTP `400` e `404` validadas.
+- Pedidos com JSON malformado devolvem HTTP `400` estruturado, sem stack trace ou detalhes internos.
 - Limpeza automática e reposição das contagens iniciais validadas.
 - Script PowerShell de smoke tests disponível em `scripts/smoke-test-api.ps1`.
 
 Ainda estão pendentes:
 
 - testes de integração executados pelo Maven com uma instância PostgreSQL dedicada;
-- tratamento estruturado de pedidos com JSON malformado;
 - correção dos registos antigos com caracteres corrompidos;
 - armazenamento seguro das passwords antes da implementação da autenticação;
 - interface Thymeleaf;
@@ -403,6 +403,7 @@ O script valida:
 - a presença dos principais campos do dashboard;
 - o CRUD completo de colaboradores, projetos, tarefas e programas internos;
 - a ocultação da password nas respostas da API;
+- a rejeição de JSON malformado com resposta estruturada e sem exposição de `trace`, `error`, `exception` ou `path`;
 - as relações de gestor, projeto e responsável;
 - estados e prioridades permitidos;
 - datas iniciais e finais;
