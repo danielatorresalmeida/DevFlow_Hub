@@ -6,6 +6,7 @@ import com.devflowhub.backend.exception.ResourceNotFoundException;
 import com.devflowhub.backend.repository.CollaboratorRepository;
 import com.devflowhub.backend.util.TextNormalizer;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,9 +18,14 @@ import java.util.Optional;
 public class CollaboratorService {
 
     private final CollaboratorRepository collaboratorRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public CollaboratorService(CollaboratorRepository collaboratorRepository) {
+    public CollaboratorService(
+            CollaboratorRepository collaboratorRepository,
+            PasswordEncoder passwordEncoder
+    ) {
         this.collaboratorRepository = collaboratorRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public List<Collaborator> findAll() {
@@ -43,6 +49,8 @@ public class CollaboratorService {
     public Collaborator create(Collaborator collaborator) {
         normalize(collaborator);
         validateNewCollaborator(collaborator);
+
+        collaborator.setPassword(passwordEncoder.encode(collaborator.getPassword()));
         return collaboratorRepository.save(collaborator);
     }
 
@@ -52,7 +60,9 @@ public class CollaboratorService {
         normalize(updatedData);
 
         if (collaboratorRepository.existsByEmailIgnoreCaseAndIdNot(updatedData.getEmail(), id)) {
-            throw new InvalidOperationException("Another collaborator already uses this email address.");
+            throw new InvalidOperationException(
+                    "Another collaborator already uses this email address."
+            );
         }
 
         existing.setName(updatedData.getName());
@@ -61,7 +71,7 @@ public class CollaboratorService {
         existing.setActive(Boolean.TRUE.equals(updatedData.getActive()));
 
         if (updatedData.getPassword() != null && !updatedData.getPassword().isBlank()) {
-            existing.setPassword(updatedData.getPassword());
+            existing.setPassword(passwordEncoder.encode(updatedData.getPassword()));
         }
 
         return collaboratorRepository.save(existing);
@@ -73,24 +83,40 @@ public class CollaboratorService {
         collaboratorRepository.delete(collaborator);
     }
 
-    // This is a simple academic login. Production systems should use hashed passwords and Spring Security.
     public Optional<Collaborator> authenticate(String email, String password) {
-        if (email == null || password == null) {
+        if (email == null || email.isBlank() || password == null || password.isBlank()) {
             return Optional.empty();
         }
 
         return collaboratorRepository.findByEmailIgnoreCase(email.trim())
                 .filter(collaborator -> Boolean.TRUE.equals(collaborator.getActive()))
-                .filter(collaborator -> password.equals(collaborator.getPassword()));
+                .filter(collaborator -> passwordMatches(password, collaborator.getPassword()));
+    }
+
+    private boolean passwordMatches(String rawPassword, String storedPassword) {
+        if (storedPassword == null || storedPassword.isBlank()) {
+            return false;
+        }
+
+        try {
+            return passwordEncoder.matches(rawPassword, storedPassword);
+        }
+        catch (IllegalArgumentException exception) {
+            return false;
+        }
     }
 
     private void validateNewCollaborator(Collaborator collaborator) {
         if (collaborator.getPassword() == null || collaborator.getPassword().isBlank()) {
-            throw new InvalidOperationException("Password is required when creating a collaborator.");
+            throw new InvalidOperationException(
+                    "Password is required when creating a collaborator."
+            );
         }
 
         if (collaboratorRepository.existsByEmailIgnoreCase(collaborator.getEmail())) {
-            throw new InvalidOperationException("Another collaborator already uses this email address.");
+            throw new InvalidOperationException(
+                    "Another collaborator already uses this email address."
+            );
         }
     }
 
@@ -103,5 +129,4 @@ public class CollaboratorService {
             collaborator.setActive(true);
         }
     }
-
 }

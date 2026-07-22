@@ -5,6 +5,9 @@
 
 BEGIN;
 
+-- Required for BCrypt hashing during controlled password migrations.
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- 1. Main tables
 CREATE TABLE IF NOT EXISTS collaborators (
     id BIGSERIAL PRIMARY KEY,
@@ -75,7 +78,25 @@ ALTER TABLE internal_programs
     ADD COLUMN IF NOT EXISTS manager_id BIGINT;
 
 -- 3. Safe defaults for existing rows
-UPDATE collaborators SET password = 'password123' WHERE password IS NULL OR BTRIM(password) = '';
+-- Secure existing password values before applying NOT NULL.
+UPDATE collaborators
+SET password = '{bcrypt}' || crypt(
+    encode(gen_random_bytes(32), 'hex'),
+    gen_salt('bf', 10)
+)
+WHERE password IS NULL
+   OR BTRIM(password) = '';
+
+UPDATE collaborators
+SET password = '{bcrypt}' || password
+WHERE password ~ '^\[aby]\$[0-9]{2}\$';
+
+UPDATE collaborators
+SET password = '{bcrypt}' || crypt(password, gen_salt('bf', 10))
+WHERE password IS NOT NULL
+  AND BTRIM(password) <> ''
+  AND password !~ '^\{[A-Za-z0-9_-]+\}.+'
+  AND password !~ '^\[aby]\$[0-9]{2}\$';
 UPDATE collaborators SET active = TRUE WHERE active IS NULL;
 UPDATE collaborators SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL;
 UPDATE tasks SET total_time_seconds = 0 WHERE total_time_seconds IS NULL;
@@ -89,6 +110,21 @@ ALTER TABLE collaborators
     ALTER COLUMN active SET NOT NULL,
     ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP,
     ALTER COLUMN created_at SET NOT NULL;
+
+DO $password_constraint$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'public.collaborators'::regclass
+          AND conname = 'collaborators_password_format_check'
+    ) THEN
+        ALTER TABLE collaborators
+            ADD CONSTRAINT collaborators_password_format_check
+            CHECK (password ~ '^\{[A-Za-z0-9_-]+\}.+');
+    END IF;
+END
+$password_constraint$;
 
 ALTER TABLE tasks
     ALTER COLUMN total_time_seconds SET DEFAULT 0,
@@ -162,12 +198,12 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_internal_programs_manager_id ON internal_programs(manager_id);
 
 -- 7. Demonstration data
--- Plain-text passwords are used only for this academic local project.
+-- BCrypt hashes are generated for local demonstration accounts.
 INSERT INTO collaborators (name, email, password, role, active)
 VALUES
-    ('Ana Silva', 'ana.silva@example.com', 'password123', 'Frontend Developer', TRUE),
-    ('Bruno Costa', 'bruno.costa@example.com', 'password123', 'Backend Developer', TRUE),
-    ('Carla Mendes', 'carla.mendes@example.com', 'password123', 'Project Manager', TRUE)
+    ('Ana Silva', 'ana.silva@example.com', '{bcrypt}' || crypt('password123', gen_salt('bf', 10)), 'Frontend Developer', TRUE),
+    ('Bruno Costa', 'bruno.costa@example.com', '{bcrypt}' || crypt('password123', gen_salt('bf', 10)), 'Backend Developer', TRUE),
+    ('Carla Mendes', 'carla.mendes@example.com', '{bcrypt}' || crypt('password123', gen_salt('bf', 10)), 'Project Manager', TRUE)
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO projects (name, description, status, start_date, end_date, manager_id)
