@@ -79,7 +79,7 @@ O histórico reorganizado não pretende alterar as datas reais de desenvolviment
 - Testes MockMvc do controller de tarefas implementados.
 - Teste de arranque do contexto Spring Boot implementado.
 - Perfil de testes configurado com uma base H2 em memória.
-- Suite validada com 19 testes, sem falhas ou erros.
+- Suite validada com 32 testes, sem falhas ou erros.
 - Backend executado com sucesso ligado a uma base PostgreSQL real.
 - Esquema PostgreSQL validado através de `spring.jpa.hibernate.ddl-auto=validate`.
 - Endpoints principais da API validados através de smoke tests automatizados.
@@ -95,8 +95,9 @@ O histórico reorganizado não pretende alterar as datas reais de desenvolviment
 Ainda estão pendentes:
 
 - testes de integração executados pelo Maven com uma instância PostgreSQL dedicada;
-- correção dos registos antigos com caracteres corrompidos;
-- armazenamento seguro das passwords antes da implementação da autenticação;
+- validação de encoding em ambientes adicionais fora do Windows PowerShell 5.1;
+- autenticação persistente com sessão HTTP ou token e proteção dos endpoints;
+- fluxo seguro de redefinição de password para contas sem credenciais conhecidas;
 - interface Thymeleaf;
 - frontend React;
 - validação do JAR final numa instalação independente.
@@ -184,7 +185,8 @@ backend/src/main/java/com/devflowhub/backend/
 ### Funcionalidades implementadas
 
 - gestão de colaboradores;
-- lógica de autenticação simples de colaboradores;
+- login de colaboradores com validação segura da password;
+- alteração de password mediante confirmação da password atual;
 - gestão de projetos e responsáveis;
 - gestão de tarefas;
 - prioridades `LOW`, `MEDIUM` e `HIGH`;
@@ -220,6 +222,16 @@ POST   /api/collaborators
 PUT    /api/collaborators/{id}
 DELETE /api/collaborators/{id}
 ```
+
+#### Autenticação
+
+```text
+POST /api/auth/login
+PUT  /api/auth/change-password
+```
+
+O login valida credenciais e devolve apenas os dados públicos do colaborador.
+Nesta fase ainda não é criada uma sessão ou token.
 
 #### Projetos
 
@@ -319,10 +331,10 @@ cd backend
 .\mvnw.cmd clean test
 ```
 
-Na validação realizada em 20/07/2026, foram executados:
+Na validação realizada em 22/07/2026, foram executados:
 
 ```text
-Tests run: 18
+Tests run: 32
 Failures: 0
 Errors: 0
 Skipped: 0
@@ -402,6 +414,9 @@ O script valida:
 - os endpoints principais de colaboradores, projetos, tarefas, programas internos e dashboard;
 - a presença dos principais campos do dashboard;
 - o CRUD completo de colaboradores, projetos, tarefas e programas internos;
+- o login com a password inicial e com a password alterada;
+- a rejeição da password antiga e de colaboradores inativos com HTTP `401`;
+- a alteração segura da password sem exposição do respetivo hash;
 - a ocultação da password nas respostas da API;
 - a rejeição de JSON malformado com resposta estruturada e sem exposição de `trace`, `error`, `exception` ou `path`;
 - as relações de gestor, projeto e responsável;

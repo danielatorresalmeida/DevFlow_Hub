@@ -10,6 +10,8 @@ $createdProjectId = $null
 $createdProgramId = $null
 $createdTaskId = $null
 $exitCode = 0
+$authInitialPassword = "SmokeAuthStart-123!"
+$authNewPassword = "SmokeAuthChanged-456!"
 
 function Write-Pass {
     param([string]$Message)
@@ -249,7 +251,7 @@ try {
     $createdCollaborator = Invoke-RestMethod -Method Post -Uri "$BaseUrl/api/collaborators" -ContentType "application/json; charset=utf-8" -Body (ConvertTo-Utf8JsonBytes @{
         name     = "API Smoke Test $timestamp"
         email    = "api.smoke.$timestamp@devflowhub.pt"
-        password = "TemporarySmokeTest#2026"
+        password = $authInitialPassword
         role     = "QA Tester"
         active   = $true
     })
@@ -261,6 +263,44 @@ try {
     $retrievedCollaborator = Invoke-RestMethod -Method Get -Uri "$BaseUrl/api/collaborators/$createdCollaboratorId"
     Assert-True ($retrievedCollaborator.id -eq $createdCollaboratorId) "GET /api/collaborators/{id}"
 
+    # Authentication and password-change lifecycle
+    $loginWithInitialPassword = Invoke-RestMethod -Method Post -Uri "$BaseUrl/api/auth/login" -ContentType "application/json; charset=utf-8" -Body (ConvertTo-Utf8JsonBytes @{
+        email    = $createdCollaborator.email
+        password = $authInitialPassword
+    })
+
+    Assert-True (
+        $loginWithInitialPassword.id -eq $createdCollaboratorId -and
+        $loginWithInitialPassword.email -eq $createdCollaborator.email
+    ) "POST /api/auth/login accepted the initial password"
+
+    Assert-True (
+        -not ($loginWithInitialPassword.PSObject.Properties.Name -contains "password")
+    ) "Login response did not expose the password"
+
+    Invoke-RestMethod -Method Put -Uri "$BaseUrl/api/auth/change-password" -ContentType "application/json; charset=utf-8" -Body (ConvertTo-Utf8JsonBytes @{
+        email           = $createdCollaborator.email
+        currentPassword = $authInitialPassword
+        newPassword     = $authNewPassword
+    }) | Out-Null
+
+    Write-Pass "PUT /api/auth/change-password changed the password"
+
+    Assert-HttpError -Method "POST" -Uri "$BaseUrl/api/auth/login" -ExpectedStatus 401 -Body (@{
+        email    = $createdCollaborator.email
+        password = $authInitialPassword
+    } | ConvertTo-Json -Compress) -ExpectedMessage "Invalid email or password."
+
+    $loginWithNewPassword = Invoke-RestMethod -Method Post -Uri "$BaseUrl/api/auth/login" -ContentType "application/json; charset=utf-8" -Body (ConvertTo-Utf8JsonBytes @{
+        email    = $createdCollaborator.email
+        password = $authNewPassword
+    })
+
+    Assert-True (
+        $loginWithNewPassword.id -eq $createdCollaboratorId -and
+        $loginWithNewPassword.email -eq $createdCollaborator.email
+    ) "POST /api/auth/login accepted the changed password"
+
     $updatedCollaborator = Invoke-RestMethod -Method Put -Uri "$BaseUrl/api/collaborators/$createdCollaboratorId" -ContentType "application/json; charset=utf-8" -Body (ConvertTo-Utf8JsonBytes @{
         name   = $createdCollaborator.name
         email  = $createdCollaborator.email
@@ -270,6 +310,14 @@ try {
 
     Assert-True ($updatedCollaborator.role -eq "Senior QA Tester") "PUT updated the collaborator role"
     Assert-True ($updatedCollaborator.active -eq $false) "PUT updated the collaborator status"
+
+    Assert-HttpError -Method "POST" -Uri "$BaseUrl/api/auth/login" -ExpectedStatus 401 -Body (@{
+        email    = $createdCollaborator.email
+        password = $authNewPassword
+    } | ConvertTo-Json -Compress) -ExpectedMessage "Invalid email or password."
+
+    Write-Pass "Inactive collaborator was rejected by the login endpoint"
+
 
     # Project validation and CRUD
     $createdProject = Invoke-RestMethod -Method Post -Uri "$BaseUrl/api/projects" -ContentType "application/json; charset=utf-8" -Body (ConvertTo-Utf8JsonBytes @{
