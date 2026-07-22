@@ -1,8 +1,8 @@
 package com.devflowhub.backend.service;
 
-import com.devflowhub.backend.dto.AuthenticatedCollaboratorResponse;
 import com.devflowhub.backend.dto.ChangePasswordRequest;
 import com.devflowhub.backend.dto.LoginRequest;
+import com.devflowhub.backend.dto.LoginResponse;
 import com.devflowhub.backend.entity.Collaborator;
 import com.devflowhub.backend.exception.AuthenticationFailedException;
 import com.devflowhub.backend.exception.InvalidOperationException;
@@ -31,34 +31,46 @@ class AuthenticationServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private JwtTokenService jwtTokenService;
+
     private AuthenticationService authenticationService;
 
     @BeforeEach
     void setUp() {
         authenticationService = new AuthenticationService(
                 collaboratorRepository,
-                passwordEncoder
+                passwordEncoder,
+                jwtTokenService
         );
     }
 
     @Test
-    void loginReturnsOnlyPublicCollaboratorDataForValidCredentials() {
+    void loginReturnsTokenAndPublicCollaboratorDataForValidCredentials() {
         Collaborator collaborator = activeCollaborator();
 
         when(collaboratorRepository.findByEmailIgnoreCase("ana@example.com"))
                 .thenReturn(Optional.of(collaborator));
         when(passwordEncoder.matches("current-secret", "{bcrypt}stored-hash"))
                 .thenReturn(true);
+        when(jwtTokenService.issue(collaborator))
+                .thenReturn(new JwtTokenService.IssuedToken(
+                        "signed.jwt.token",
+                        900
+                ));
 
-        AuthenticatedCollaboratorResponse response = authenticationService.login(
+        LoginResponse response = authenticationService.login(
                 new LoginRequest("  ana@example.com  ", "current-secret")
         );
 
-        assertThat(response.id()).isEqualTo(1L);
-        assertThat(response.name()).isEqualTo("Ana Silva");
-        assertThat(response.email()).isEqualTo("ana@example.com");
-        assertThat(response.role()).isEqualTo("Developer");
-        assertThat(response.active()).isTrue();
+        assertThat(response.accessToken()).isEqualTo("signed.jwt.token");
+        assertThat(response.tokenType()).isEqualTo("Bearer");
+        assertThat(response.expiresIn()).isEqualTo(900);
+        assertThat(response.collaborator().id()).isEqualTo(1L);
+        assertThat(response.collaborator().name()).isEqualTo("Ana Silva");
+        assertThat(response.collaborator().email()).isEqualTo("ana@example.com");
+        assertThat(response.collaborator().role()).isEqualTo("Developer");
+        assertThat(response.collaborator().active()).isTrue();
     }
 
     @Test
@@ -74,21 +86,25 @@ class AuthenticationServiceTest {
     }
 
     @Test
-    void changePasswordEncodesAndSavesNewPassword() {
+    void changePasswordUsesAuthenticatedCollaboratorAndSavesNewHash() {
         Collaborator collaborator = activeCollaborator();
 
-        when(collaboratorRepository.findByEmailIgnoreCase("ana@example.com"))
+        when(collaboratorRepository.findById(1L))
                 .thenReturn(Optional.of(collaborator));
-        when(passwordEncoder.matches("current-secret", "{bcrypt}stored-hash"))
-                .thenReturn(true);
-        when(passwordEncoder.matches("new-secret-123", "{bcrypt}stored-hash"))
-                .thenReturn(false);
+        when(passwordEncoder.matches(
+                "current-secret",
+                "{bcrypt}stored-hash"
+        )).thenReturn(true);
+        when(passwordEncoder.matches(
+                "new-secret-123",
+                "{bcrypt}stored-hash"
+        )).thenReturn(false);
         when(passwordEncoder.encode("new-secret-123"))
                 .thenReturn("{bcrypt}new-hash");
 
         authenticationService.changePassword(
+                1L,
                 new ChangePasswordRequest(
-                        "ana@example.com",
                         "current-secret",
                         "new-secret-123"
                 )
@@ -99,23 +115,52 @@ class AuthenticationServiceTest {
     }
 
     @Test
+    void changePasswordRejectsInvalidCurrentPassword() {
+        Collaborator collaborator = activeCollaborator();
+
+        when(collaboratorRepository.findById(1L))
+                .thenReturn(Optional.of(collaborator));
+        when(passwordEncoder.matches(
+                "wrong-secret",
+                "{bcrypt}stored-hash"
+        )).thenReturn(false);
+
+        assertThatThrownBy(() -> authenticationService.changePassword(
+                1L,
+                new ChangePasswordRequest(
+                        "wrong-secret",
+                        "new-secret-123"
+                )
+        ))
+                .isInstanceOf(AuthenticationFailedException.class)
+                .hasMessage("Current password is invalid.");
+
+        verify(passwordEncoder, never()).encode("new-secret-123");
+        verify(collaboratorRepository, never()).save(collaborator);
+    }
+
+    @Test
     void changePasswordRejectsReuseOfCurrentPassword() {
         Collaborator collaborator = activeCollaborator();
 
-        when(collaboratorRepository.findByEmailIgnoreCase("ana@example.com"))
+        when(collaboratorRepository.findById(1L))
                 .thenReturn(Optional.of(collaborator));
-        when(passwordEncoder.matches("current-secret", "{bcrypt}stored-hash"))
-                .thenReturn(true);
+        when(passwordEncoder.matches(
+                "current-secret",
+                "{bcrypt}stored-hash"
+        )).thenReturn(true);
 
         assertThatThrownBy(() -> authenticationService.changePassword(
+                1L,
                 new ChangePasswordRequest(
-                        "ana@example.com",
                         "current-secret",
                         "current-secret"
                 )
         ))
                 .isInstanceOf(InvalidOperationException.class)
-                .hasMessage("New password must be different from the current password.");
+                .hasMessage(
+                        "New password must be different from the current password."
+                );
 
         verify(passwordEncoder, never()).encode("current-secret");
         verify(collaboratorRepository, never()).save(collaborator);

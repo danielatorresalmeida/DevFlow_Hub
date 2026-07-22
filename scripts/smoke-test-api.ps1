@@ -1,6 +1,8 @@
 param(
     [string]$BaseUrl = "http://localhost:8080",
-    [int]$TimerWaitSeconds = 2
+    [int]$TimerWaitSeconds = 2,
+    [string]$AuthEmail = $env:DEVFLOW_SMOKE_EMAIL,
+    [string]$AuthPassword = $env:DEVFLOW_SMOKE_PASSWORD
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,6 +14,7 @@ $createdTaskId = $null
 $exitCode = 0
 $authInitialPassword = "SmokeAuthStart-123!"
 $authNewPassword = "SmokeAuthChanged-456!"
+$apiHeaders = @{}
 
 function Write-Pass {
     param([string]$Message)
@@ -38,7 +41,8 @@ function Assert-HttpError {
         [string]$Body,
         [string]$ExpectedMessage,
         [string]$ExpectedValidationField,
-        [string]$ExpectedValidationMessage
+        [string]$ExpectedValidationMessage,
+        [switch]$SkipAuthentication
     )
 
     $responseFile = Join-Path $env:TEMP ("devflow-response-" + [guid]::NewGuid() + ".json")
@@ -46,6 +50,16 @@ function Assert-HttpError {
 
     try {
         $arguments = @("-sS", "-o", $responseFile, "-w", "%{http_code}", "-X", $Method)
+
+        if (
+            -not $SkipAuthentication -and
+            -not [string]::IsNullOrWhiteSpace($apiHeaders.Authorization)
+        ) {
+            $arguments += @(
+                "-H",
+                "Authorization: $($apiHeaders.Authorization)"
+            )
+        }
 
         if (-not [string]::IsNullOrWhiteSpace($Body)) {
             $bodyFile = Join-Path $env:TEMP ("devflow-request-" + [guid]::NewGuid() + ".json")
@@ -129,6 +143,7 @@ function Assert-MalformedJsonError {
             -w "%{http_code}" `
             -X POST `
             $Uri `
+            -H "Authorization: $($apiHeaders.Authorization)" `
             -H "Content-Type: application/json; charset=utf-8" `
             --data-binary "@$requestFile"
 
@@ -214,6 +229,53 @@ try {
     Write-Host "Timer wait: $TimerWaitSeconds second(s)"
     Write-Host ""
 
+    Assert-HttpError `
+        -Method "GET" `
+        -Uri "$BaseUrl/api/dashboard" `
+        -ExpectedStatus 401 `
+        -ExpectedMessage "Authentication is required." `
+        -SkipAuthentication
+
+    $apiHeaders = @{
+        Authorization = "Bearer invalid-token"
+    }
+
+    Assert-HttpError `
+        -Method "GET" `
+        -Uri "$BaseUrl/api/dashboard" `
+        -ExpectedStatus 401 `
+        -ExpectedMessage "Authentication is required."
+
+    $apiHeaders = @{}
+
+    if (
+        [string]::IsNullOrWhiteSpace($AuthEmail) -or
+        [string]::IsNullOrWhiteSpace($AuthPassword)
+    ) {
+        throw "Set DEVFLOW_SMOKE_EMAIL and DEVFLOW_SMOKE_PASSWORD to the credentials of an existing active collaborator."
+    }
+
+    $bootstrapLogin = Invoke-RestMethod `
+        -Method Post `
+        -Uri "$BaseUrl/api/auth/login" `
+        -ContentType "application/json; charset=utf-8" `
+        -Body (ConvertTo-Utf8JsonBytes @{
+            email = $AuthEmail
+            password = $AuthPassword
+        })
+
+    Assert-True (
+        -not [string]::IsNullOrWhiteSpace($bootstrapLogin.accessToken) -and
+        $bootstrapLogin.tokenType -eq "Bearer" -and
+        [long]$bootstrapLogin.expiresIn -gt 0
+    ) "POST /api/auth/login issued the bootstrap Bearer token"
+
+    $apiHeaders = @{
+        Authorization = "Bearer $($bootstrapLogin.accessToken)"
+    }
+
+    $PSDefaultParameterValues["Invoke-RestMethod:Headers"] = $apiHeaders
+
     $collaboratorsBefore = Invoke-RestMethod -Method Get -Uri "$BaseUrl/api/collaborators"
     $projectsBefore = Invoke-RestMethod -Method Get -Uri "$BaseUrl/api/projects"
     $tasksBefore = Invoke-RestMethod -Method Get -Uri "$BaseUrl/api/tasks"
@@ -270,19 +332,41 @@ try {
     })
 
     Assert-True (
-        $loginWithInitialPassword.id -eq $createdCollaboratorId -and
-        $loginWithInitialPassword.email -eq $createdCollaborator.email
-    ) "POST /api/auth/login accepted the initial password"
+        $loginWithInitialPassword.collaborator.id -eq $createdCollaboratorId -and
+        $loginWithInitialPassword.collaborator.email -eq $createdCollaborator.email -and
+        -not [string]::IsNullOrWhiteSpace($loginWithInitialPassword.accessToken) -and
+        $loginWithInitialPassword.tokenType -eq "Bearer" -and
+        [long]$loginWithInitialPassword.expiresIn -gt 0
+    ) "POST /api/auth/login accepted the initial password and issued a JWT"
 
     Assert-True (
+        -not ($loginWithInitialPassword.collaborator.PSObject.Properties.Name -contains "password") -and
         -not ($loginWithInitialPassword.PSObject.Properties.Name -contains "password")
     ) "Login response did not expose the password"
 
-    Invoke-RestMethod -Method Put -Uri "$BaseUrl/api/auth/change-password" -ContentType "application/json; charset=utf-8" -Body (ConvertTo-Utf8JsonBytes @{
-        email           = $createdCollaborator.email
-        currentPassword = $authInitialPassword
-        newPassword     = $authNewPassword
-    }) | Out-Null
+    $temporaryHeaders = @{
+        Authorization = "Bearer $($loginWithInitialPassword.accessToken)"
+    }
+
+    $temporaryDashboard = Invoke-RestMethod `
+        -Method Get `
+        -Uri "$BaseUrl/api/dashboard" `
+        -Headers $temporaryHeaders
+
+    Assert-True (
+        $temporaryDashboard.PSObject.Properties.Name -contains "taskCount"
+    ) "The temporary collaborator JWT accessed a protected endpoint"
+
+    Invoke-RestMethod `
+        -Method Put `
+        -Uri "$BaseUrl/api/auth/change-password" `
+        -Headers $temporaryHeaders `
+        -ContentType "application/json; charset=utf-8" `
+        -Body (ConvertTo-Utf8JsonBytes @{
+            currentPassword = $authInitialPassword
+            newPassword     = $authNewPassword
+        }) |
+    Out-Null
 
     Write-Pass "PUT /api/auth/change-password changed the password"
 
@@ -297,9 +381,10 @@ try {
     })
 
     Assert-True (
-        $loginWithNewPassword.id -eq $createdCollaboratorId -and
-        $loginWithNewPassword.email -eq $createdCollaborator.email
-    ) "POST /api/auth/login accepted the changed password"
+        $loginWithNewPassword.collaborator.id -eq $createdCollaboratorId -and
+        $loginWithNewPassword.collaborator.email -eq $createdCollaborator.email -and
+        -not [string]::IsNullOrWhiteSpace($loginWithNewPassword.accessToken)
+    ) "POST /api/auth/login accepted the changed password and issued a new JWT"
 
     $updatedCollaborator = Invoke-RestMethod -Method Put -Uri "$BaseUrl/api/collaborators/$createdCollaboratorId" -ContentType "application/json; charset=utf-8" -Body (ConvertTo-Utf8JsonBytes @{
         name   = $createdCollaborator.name
@@ -545,6 +630,10 @@ finally {
     if ($null -ne $createdCollaboratorId) {
         Remove-TemporaryResource "temporary collaborator $createdCollaboratorId" "$BaseUrl/api/collaborators/$createdCollaboratorId"
     }
+
+    $PSDefaultParameterValues.Remove(
+        "Invoke-RestMethod:Headers"
+    )
 }
 
 exit $exitCode
