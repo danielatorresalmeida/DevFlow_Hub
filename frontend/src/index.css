@@ -1,0 +1,143 @@
+﻿:root {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #172033;
+  background: #f4f6f8;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 32px 20px;
+}
+
+.card {
+  width: min(100%, 460px);
+  padding: 36px;
+  background: #ffffff;
+  border: 1px solid #e2e7ee;
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgb(23 32 51 / 8%);
+}
+
+.card--wide {
+  width: min(100%, 780px);
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: #526071;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 2.75rem);
+}
+
+.description {
+  margin: 16px 0 28px;
+  color: #5d6878;
+  line-height: 1.6;
+}
+
+.form {
+  display: grid;
+  gap: 10px;
+}
+
+.form label {
+  margin-top: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.form input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #cfd6df;
+  border-radius: 8px;
+}
+
+.form input:disabled {
+  background: #f5f6f8;
+}
+
+.form button {
+  margin-top: 14px;
+  padding: 13px 18px;
+  color: #ffffff;
+  font-weight: 700;
+  background: #26364d;
+  border: 0;
+  border-radius: 8px;
+}
+
+.form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.temporary-note {
+  margin: 18px 0;
+  color: #737e8c;
+  font-size: 0.875rem;
+}
+
+.text-link {
+  color: #274f87;
+  font-weight: 600;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.dashboard-item {
+  display: grid;
+  gap: 8px;
+  min-height: 140px;
+  padding: 20px;
+  background: #f8f9fb;
+  border: 1px solid #e2e7ee;
+  border-radius: 8px;
+}
+
+.dashboard-item span {
+  color: #687484;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 680px) {
+  .card {
+    padding: 26px 22px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
