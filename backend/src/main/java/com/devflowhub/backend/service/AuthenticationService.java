@@ -3,6 +3,7 @@ package com.devflowhub.backend.service;
 import com.devflowhub.backend.dto.AuthenticatedCollaboratorResponse;
 import com.devflowhub.backend.dto.ChangePasswordRequest;
 import com.devflowhub.backend.dto.LoginRequest;
+import com.devflowhub.backend.dto.LoginResponse;
 import com.devflowhub.backend.entity.Collaborator;
 import com.devflowhub.backend.exception.AuthenticationFailedException;
 import com.devflowhub.backend.exception.InvalidOperationException;
@@ -17,33 +18,69 @@ public class AuthenticationService {
 
     private final CollaboratorRepository collaboratorRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenService jwtTokenService;
 
     public AuthenticationService(
             CollaboratorRepository collaboratorRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            JwtTokenService jwtTokenService
     ) {
         this.collaboratorRepository = collaboratorRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtTokenService = jwtTokenService;
     }
 
-    public AuthenticatedCollaboratorResponse login(LoginRequest request) {
-        return toResponse(authenticateRequired(request.email(), request.password()));
+    public LoginResponse login(LoginRequest request) {
+        Collaborator collaborator = authenticateRequired(
+                request.email(),
+                request.password()
+        );
+
+        JwtTokenService.IssuedToken issuedToken =
+                jwtTokenService.issue(collaborator);
+
+        return new LoginResponse(
+                issuedToken.accessToken(),
+                "Bearer",
+                issuedToken.expiresInSeconds(),
+                toResponse(collaborator)
+        );
     }
 
     @Transactional
-    public void changePassword(ChangePasswordRequest request) {
-        Collaborator collaborator = authenticateRequired(
-                request.email(),
-                request.currentPassword()
-        );
+    public void changePassword(
+            Long authenticatedCollaboratorId,
+            ChangePasswordRequest request
+    ) {
+        Collaborator collaborator = collaboratorRepository
+                .findById(authenticatedCollaboratorId)
+                .filter(item -> Boolean.TRUE.equals(item.getActive()))
+                .orElseThrow(() -> new AuthenticationFailedException(
+                        "The authenticated collaborator is not active."
+                ));
 
-        if (passwordMatches(request.newPassword(), collaborator.getPassword())) {
+        if (!passwordMatches(
+                request.currentPassword(),
+                collaborator.getPassword()
+        )) {
+            throw new AuthenticationFailedException(
+                    "Current password is invalid."
+            );
+        }
+
+        if (passwordMatches(
+                request.newPassword(),
+                collaborator.getPassword()
+        )) {
             throw new InvalidOperationException(
                     "New password must be different from the current password."
             );
         }
 
-        collaborator.setPassword(passwordEncoder.encode(request.newPassword()));
+        collaborator.setPassword(
+                passwordEncoder.encode(request.newPassword())
+        );
+
         collaboratorRepository.save(collaborator);
     }
 
