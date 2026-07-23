@@ -71,6 +71,8 @@ public class TaskService {
         task.setTotalTimeSeconds(0L);
         task.setTimerActive(false);
         task.setTimerStartedAt(null);
+        task.setCreatedAt(null);
+        task.setUpdatedAt(null);
         prepareAndValidate(task);
         return taskRepository.save(task);
     }
