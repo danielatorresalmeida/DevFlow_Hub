@@ -8,6 +8,7 @@ import com.devflowhub.backend.repository.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -50,6 +51,27 @@ class TaskServiceTest {
                 collaboratorRepository,
                 fixedClock
         );
+    }
+
+    @Test
+    void createIgnoresClientSuppliedAuditFields() {
+        Task task = new Task();
+        task.setTitle("Audit task");
+        task.setStatus("PENDING");
+        task.setPriority("MEDIUM");
+        task.setCreatedAt(LocalDateTime.of(2000, 1, 1, 0, 0));
+        task.setUpdatedAt(LocalDateTime.of(2000, 1, 2, 0, 0));
+
+        when(taskRepository.save(any(Task.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        taskService.create(task);
+
+        ArgumentCaptor<Task> captor = ArgumentCaptor.forClass(Task.class);
+        verify(taskRepository).save(captor.capture());
+
+        assertThat(captor.getValue().getCreatedAt()).isNull();
+        assertThat(captor.getValue().getUpdatedAt()).isNull();
     }
 
     @Test

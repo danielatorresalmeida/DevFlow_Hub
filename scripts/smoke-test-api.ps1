@@ -502,6 +502,8 @@ try {
         totalTimeSeconds = 999
         timerActive      = $true
         timerStartedAt   = "2026-07-21T10:00:00"
+        createdAt        = "2000-01-01T00:00:00"
+        updatedAt        = "2000-01-02T00:00:00"
     })
 
     $createdTaskId = [long]$createdTask.id
@@ -509,15 +511,22 @@ try {
     Assert-True ($createdTask.projectId -eq $createdProjectId) "Task project relationship was stored"
     Assert-True ($createdTask.assigneeId -eq $createdCollaboratorId) "Task assignee relationship was stored"
     Assert-True ($createdTask.totalTimeSeconds -eq 0 -and $createdTask.timerActive -eq $false -and $null -eq $createdTask.timerStartedAt) "Task creation protected the timer state"
+    Assert-True ($null -ne $createdTask.createdAt -and $null -ne $createdTask.updatedAt) "Task creation generated audit timestamps"
+    Assert-True ($createdTask.createdAt -ne "2000-01-01T00:00:00" -and $createdTask.updatedAt -ne "2000-01-02T00:00:00") "Task creation ignored client-supplied audit timestamps"
 
     $retrievedTask = Invoke-RestMethod -Method Get -Uri "$BaseUrl/api/tasks/$createdTaskId"
     Assert-True ($retrievedTask.id -eq $createdTaskId) "GET /api/tasks/{id}"
+    Assert-True ($retrievedTask.createdAt -eq $createdTask.createdAt -and $retrievedTask.updatedAt -eq $createdTask.updatedAt) "GET returned the stored task audit timestamps"
+
+    Start-Sleep -Seconds 1
 
     $updatedTask = Invoke-RestMethod -Method Put -Uri "$BaseUrl/api/tasks/$createdTaskId" -ContentType "application/json; charset=utf-8" -Body (ConvertTo-Utf8JsonBytes @{
         title = "Updated API Task $timestamp"; description = "Task updated before starting the timer."; status = "REVIEW"; priority = "LOW"; projectId = $createdProjectId; assigneeId = $createdCollaboratorId
     })
 
     Assert-True ($updatedTask.status -eq "REVIEW" -and $updatedTask.priority -eq "LOW") "PUT updated a task while its timer was inactive"
+    Assert-True ($updatedTask.createdAt -eq $createdTask.createdAt) "PUT preserved the task creation timestamp"
+    Assert-True ([string]::CompareOrdinal([string]$updatedTask.updatedAt, [string]$createdTask.updatedAt) -gt 0) "PUT refreshed the task update timestamp"
 
     $startedTask = Invoke-RestMethod -Method Post -Uri "$BaseUrl/api/tasks/$createdTaskId/start-timer"
     Assert-True ($startedTask.timerActive -eq $true -and $startedTask.status -eq "IN_PROGRESS" -and $null -ne $startedTask.timerStartedAt) "Task timer started"
