@@ -24,9 +24,19 @@ Atualiza uma base de dados criada por versões anteriores do projeto.
 O script pode incluir alterações como:
 
 - conversão de identificadores para `BIGINT`;
-- criação de campos de auditoria;
+- criação dos campos de auditoria `tasks.created_at` e `tasks.updated_at`;
 - alinhamento dos estados e prioridades;
 - atualização das relações entre tabelas.
+
+### `migrations/20260723_add_task_audit_fields.sql`
+
+Migração idempotente dedicada aos campos de auditoria das tarefas. O script:
+
+- adiciona `created_at` e `updated_at` quando não existem;
+- preenche valores em falta nas linhas existentes;
+- aplica valores por defeito;
+- torna ambos os campos obrigatórios;
+- valida que não ficaram tarefas sem timestamps.
 
 ## Criar uma instalação nova
 

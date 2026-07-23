@@ -1,5 +1,6 @@
 package com.devflowhub.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -12,6 +13,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "tasks")
@@ -53,9 +55,11 @@ public class Task {
     @Column(name = "timer_started_at")
     private LocalDateTime timerStartedAt;
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
@@ -64,11 +68,8 @@ public class Task {
 
     @PrePersist
     protected void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
-
-        if (createdAt == null) {
-            createdAt = now;
-        }
+        LocalDateTime now = auditNow();
+        createdAt = now;
 
         if (totalTimeSeconds == null) {
             totalTimeSeconds = 0L;
@@ -83,7 +84,11 @@ public class Task {
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = auditNow();
+    }
+
+    private LocalDateTime auditNow() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
     }
 
     public Long getId() {
