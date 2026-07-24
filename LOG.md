@@ -1511,3 +1511,96 @@ O conjunto de demonstração possuía zero temporizadores ativos. Por esse motiv
 ### Próxima etapa
 
 Rever o diff completo, criar o commit da branch `feature/frontend-tasks-list` e abrir um pull request para `develop`.
+---
+
+## Marco 17 - 24/07/2026 - Detalhe autenticado de projeto
+
+### Objetivo
+
+Criar uma página autenticada de detalhe de projeto, permitir a navegação a partir da lista de projetos e apresentar as tarefas associadas ao projeto selecionado.
+
+### Funcionalidades implementadas
+
+- criação da rota protegida `/projects/:projectId`;
+- criação da página `ProjectDetailPage`;
+- ligação de cada cartão da lista de projetos ao respetivo detalhe;
+- integração com `GET /api/projects/{id}`;
+- carregamento dos colaboradores através de `GET /api/collaborators`;
+- carregamento das tarefas através de `GET /api/tasks`;
+- associação do `managerId` ao nome do gestor;
+- associação do `assigneeId` ao nome do responsável;
+- filtragem das tarefas através do respetivo `projectId`;
+- apresentação dos dados principais do projeto;
+- apresentação das tarefas associadas;
+- estado vazio para projetos sem tarefas;
+- tratamento de identificadores inválidos e projetos inexistentes;
+- ligação para regressar à lista de projetos;
+- manutenção da navegação e do logout;
+- layout responsivo para desktop e dispositivos móveis.
+
+### Decisões de implementação
+
+O backend disponibiliza `GET /api/projects/{id}`, mas ainda não possui um endpoint específico para obter apenas as tarefas de um projeto.
+
+A página carrega todas as tarefas através de `GET /api/tasks` e filtra no frontend os registos cujo `projectId` corresponde ao projeto.
+
+Esta solução é adequada ao volume atual de dados. Num cenário com maior volume, deverá ser considerado um endpoint como `GET /api/projects/{id}/tasks`.
+
+Os dados do projeto, colaboradores e tarefas são carregados em paralelo através de `Promise.all`.
+
+O campo `totalTimeSeconds` continua a ser apresentado como Tracked time e representa apenas o tempo já registado.
+
+### Ficheiros principais
+
+- `frontend/src/index.css`
+- `frontend/src/pages/ProjectDetailPage.tsx`
+- `frontend/src/pages/ProjectsPage.tsx`
+- `frontend/src/routes/AppRoutes.tsx`
+- `README.md`
+- `frontend/README.md`
+- `LOG.md`
+
+### Validação realizada
+
+Foram confirmados:
+
+- acesso ao detalhe através de View project;
+- rota direta `/projects/:projectId`;
+- projetos com zero, uma e duas tarefas;
+- filtragem correta das tarefas por `projectId`;
+- associação correta dos responsáveis;
+- apresentação de estado, prioridade e tempo registado;
+- apresentação de `Not assigned` e `Not set`;
+- estado vazio No associated tasks;
+- `/projects/abc` tratado como Project not found;
+- `/projects/999999` tratado como Project not found;
+- atualização direta com preservação da sessão;
+- navegação entre Dashboard, Projects e Tasks;
+- ligação Back to projects;
+- logout acessível;
+- ausência de sobreposição e overflow horizontal;
+- layout desktop validado a 100% de zoom;
+- layout móvel validado numa viewport de `390 × 844`.
+
+### Validação técnica
+
+- `npm run lint`: sucesso;
+- `npm run build`: sucesso;
+- 41 módulos transformados pelo Vite;
+- build concluído sem erros TypeScript;
+- CSS de produção com 13,48 kB;
+- JavaScript de produção com 260,44 kB;
+- `git diff --check` concluído sem erros.
+
+### Trabalho pendente
+
+- criar a página de detalhe de tarefa;
+- implementar os controlos do temporizador;
+- implementar documentação de projeto e de tarefa;
+- adicionar operações de criação, edição e eliminação;
+- avaliar um endpoint backend específico para tarefas de um projeto;
+- adicionar testes automatizados do frontend.
+
+### Próxima etapa
+
+Rever o diff completo, criar o commit da branch `feature/frontend-project-detail` e abrir um pull request para `develop`.
