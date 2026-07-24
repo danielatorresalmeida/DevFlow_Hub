@@ -91,8 +91,8 @@ A decisão arquitetural está documentada em [`docs/architecture/frontend-decisi
 ### Frontend React
 
 - Fundação React, TypeScript e Vite implementada.
-- Rotas `/login`, `/dashboard` e página de recurso não encontrado.
-- Rota do dashboard protegida.
+- Rotas `/login`, `/dashboard`, `/projects` e página de recurso não encontrado.
+- Rotas do dashboard e da lista de projetos protegidas.
 - Integração real com `POST /api/auth/login`.
 - Sessão autenticada guardada em `sessionStorage`.
 - Persistência da sessão após atualização da página.
@@ -105,11 +105,19 @@ A decisão arquitetural está documentada em [`docs/architecture/frontend-decisi
 - Apresentação de tarefas recentes e projetos com prazos próximos.
 - Estados de carregamento, erro, repetição do pedido e ausência de dados.
 - Interface responsiva.
+- Cabeçalho autenticado reutilizável com identidade do utilizador, navegação e logout.
+- Navegação entre Dashboard e Projects através de React Router.
+- Lista autenticada de projetos ligada a `GET /api/projects`.
+- Dados dos gestores obtidos através de `GET /api/collaborators`.
+- Projetos apresentados com estado, descrição, gestor e datas.
+- Estados de carregamento, erro, repetição do pedido e lista vazia na página de projetos.
+- Layout validado em desktop e numa viewport móvel de `390 × 844`.
 - `npm run lint` e `npm run build` validados com sucesso.
 
 ### Trabalho ainda pendente
 
-- Páginas completas para projetos, tarefas, colaboradores e programas internos.
+- Página de detalhe de projeto, incluindo tarefas e documentação associada.
+- Listas e páginas de detalhe para tarefas, colaboradores e programas internos.
 - Criação, edição e eliminação de recursos através do frontend.
 - Controlo do temporizador através da interface React.
 - Interface de alteração e redefinição segura de palavra-passe.

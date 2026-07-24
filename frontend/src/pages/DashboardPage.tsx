@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+
 import {
   ApiClientError,
 } from '../api/apiClient'
 import { getDashboardSummary } from '../api/dashboardApi'
 import { useAuth } from '../auth/useAuth'
+import { AppHeader } from '../components/AppHeader'
 import type {
   DashboardProjectItem,
   DashboardSummary,
@@ -122,8 +123,7 @@ function UpcomingProject({ project }: {
 }
 
 export function DashboardPage() {
-  const { session, signOut } = useAuth()
-  const navigate = useNavigate()
+  const { session } = useAuth()
 
   const [summary, setSummary] =
     useState<DashboardSummary | null>(null)
@@ -191,10 +191,6 @@ export function DashboardPage() {
 
   const { collaborator } = session
 
-  function handleSignOut() {
-    signOut()
-    navigate('/login', { replace: true })
-  }
 
   function handleRetry() {
     setReloadVersion((current) => current + 1)
@@ -203,24 +199,10 @@ export function DashboardPage() {
   return (
     <main className="page">
       <section className="card card--wide">
-        <header className="dashboard-header">
-          <div>
-            <p className="eyebrow">DevFlow Hub</p>
-            <h1>Dashboard</h1>
-          </div>
-
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={handleSignOut}
-          >
-            Sign out
-          </button>
-        </header>
-
-        <p className="description">
-          Welcome, {collaborator.name}.
-        </p>
+        <AppHeader
+          title="Dashboard"
+          description={`Welcome, ${collaborator.name}.`}
+        />
 
         <section
           className="account-panel"

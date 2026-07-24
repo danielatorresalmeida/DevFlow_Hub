@@ -1331,3 +1331,87 @@ O build Vite transformou 34 módulos e terminou sem erros TypeScript.
 ### Próxima etapa
 
 Rever o diff staged, criar o commit da branch e abrir um pull request para `develop`.
+
+---
+
+## Marco 15 - 24/07/2026 - Lista autenticada de projetos
+
+### Objetivo
+
+Criar a primeira página autenticada de consulta de projetos no frontend React e estabelecer uma navegação reutilizável para as futuras áreas da aplicação.
+
+### Funcionalidades implementadas
+
+- criação da rota protegida `/projects`;
+- criação de tipos TypeScript para projetos e colaboradores;
+- integração autenticada com `GET /api/projects`;
+- integração autenticada com `GET /api/collaborators`;
+- carregamento paralelo dos projetos e colaboradores;
+- associação do `managerId` ao nome do respetivo gestor;
+- apresentação dos projetos através de cartões;
+- apresentação do identificador, nome, descrição, estado, gestor e datas;
+- indicação de valores não definidos;
+- estados de loading, erro, retry e lista vazia;
+- cabeçalho autenticado reutilizável;
+- navegação entre Dashboard e Projects;
+- logout disponível nas páginas autenticadas;
+- preparação do cliente de API para a futura página `/projects/:id`;
+- layout responsivo para desktop e dispositivos móveis.
+### Decisões de implementação
+
+Foi criado o componente reutilizável `AppHeader` para evitar a repetição da identidade do utilizador, da navegação e da operação de logout em cada página autenticada.
+
+Os projetos e colaboradores são carregados em paralelo através de `Promise.all`. O frontend constrói depois um mapa entre o identificador do colaborador e o respetivo nome, permitindo apresentar o gestor de cada projeto sem alterar o contrato atual do backend.
+
+A futura página de detalhe do projeto poderá utilizar `getProjectById` e incluir as tarefas e a documentação associadas ao projeto.
+
+### Ficheiros principais
+
+- `frontend/src/api/collaboratorsApi.ts`
+- `frontend/src/api/projectsApi.ts`
+- `frontend/src/components/AppHeader.tsx`
+- `frontend/src/pages/ProjectsPage.tsx`
+- `frontend/src/types/collaborator.ts`
+- `frontend/src/types/project.ts`
+- `frontend/src/pages/DashboardPage.tsx`
+- `frontend/src/routes/AppRoutes.tsx`
+- `frontend/src/index.css`
+- `README.md`
+- `frontend/README.md`
+- `LOG.md`
+
+### Validação realizada
+
+Foram confirmados:
+
+- carregamento dos quatro projetos existentes no PostgreSQL;
+- navegação entre `/dashboard` e `/projects`;
+- atualização direta de `/projects` com preservação da sessão;
+- apresentação dos estados, descrições, gestores e datas;
+- apresentação de `Not assigned` quando não existe gestor;
+- logout a partir da página de projetos;
+- ausência de scroll horizontal;
+- layout desktop validado a 100% de zoom;
+- layout móvel validado numa viewport de `390 × 844`;
+- cartões apresentados numa única coluna em dispositivos móveis;
+- textos, badges e datas mantidos dentro dos respetivos cartões.
+
+### Validação técnica
+
+- `npm run lint`: sucesso;
+- `npm run build`: sucesso;
+- 38 módulos transformados pelo Vite;
+- build concluído sem erros TypeScript.
+
+### Trabalho pendente
+
+- implementar a lista autenticada de tarefas;
+- criar a página de detalhe de projeto;
+- apresentar as tarefas associadas ao projeto;
+- implementar documentação de projeto e de tarefa;
+- adicionar operações de criação e edição;
+- adicionar testes automatizados do frontend.
+
+### Próxima etapa
+
+Rever o diff final, criar o commit da branch `feature/frontend-projects-list` e abrir um pull request para `develop`.

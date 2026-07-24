@@ -1,7 +1,8 @@
-﻿import { Navigate, Route, Routes } from 'react-router'
+import { Navigate, Route, Routes } from 'react-router'
 import { DashboardPage } from '../pages/DashboardPage'
 import { LoginPage } from '../pages/LoginPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
+import { ProjectsPage } from '../pages/ProjectsPage'
 import { ProtectedRoute } from './ProtectedRoute'
 
 export function AppRoutes() {
@@ -19,6 +20,15 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/projects"
+        element={
+          <ProtectedRoute>
+            <ProjectsPage />
           </ProtectedRoute>
         }
       />
