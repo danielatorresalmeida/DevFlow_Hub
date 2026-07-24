@@ -73,6 +73,15 @@ export function AppHeader({
         >
           Projects
         </NavLink>
+
+        <NavLink
+          to="/tasks"
+          className={({ isActive }) => (
+            getNavLinkClassName(isActive)
+          )}
+        >
+          Tasks
+        </NavLink>
       </nav>
     </header>
   )
