@@ -40,6 +40,18 @@ Frontend React do DevFlow Hub, responsável pela autenticação do utilizador, n
 - apresentação de estado, prioridade, descrição, tempo registado e datas;
 - indicação de tarefas com temporizador ativo;
 - estados de loading, erro, retry e lista vazia nas tarefas;
+- ligação View task na lista de tarefas;
+- ligação View task no detalhe do projeto;
+- rota protegida `/tasks/:taskId`;
+- detalhe da tarefa ligado a `GET /api/tasks/{id}`;
+- apresentação do projeto, responsável e estado do temporizador;
+- ligação do projeto associado ao respetivo detalhe;
+- atualização visual do tempo durante uma sessão ativa;
+- início, pausa e retoma do temporizador;
+- conclusão da tarefa com confirmação;
+- mensagens de sucesso e erro nas operações;
+- bloqueio do temporizador depois da conclusão;
+- tratamento de identificadores inválidos e tarefas inexistentes;
 - layout responsivo.
 
 ## Estrutura principal
@@ -66,6 +78,7 @@ frontend/src/
 │   ├── NotFoundPage.tsx
 │   ├── ProjectDetailPage.tsx
 │   ├── ProjectsPage.tsx
+│   ├── TaskDetailPage.tsx
 │   └── TasksPage.tsx
 ├── routes/
 │   ├── AppRoutes.tsx
@@ -154,6 +167,7 @@ O build de produção é criado em `dist/`.
 /projects               protegida
 /projects/:projectId    protegida
 /tasks                  protegida
+/tasks/:taskId          protegida
 *                       página não encontrada
 ```
 

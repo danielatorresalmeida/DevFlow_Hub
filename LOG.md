@@ -1604,3 +1604,148 @@ Foram confirmados:
 ### Próxima etapa
 
 Rever o diff completo, criar o commit da branch `feature/frontend-project-detail` e abrir um pull request para `develop`.
+---
+
+## Marco 18 - 24/07/2026 - Detalhe de tarefa e controlos do temporizador
+
+### Objetivo
+
+Criar uma página autenticada de detalhe de tarefa e disponibilizar o ciclo completo do temporizador através da interface React.
+
+### Funcionalidades implementadas
+
+- criação da rota protegida `/tasks/:taskId`;
+- criação da página `TaskDetailPage`;
+- ligação View task na lista geral de tarefas;
+- ligação View task nas tarefas associadas ao projeto;
+- integração com `GET /api/tasks/{id}`;
+- carregamento dos projetos e colaboradores;
+- resolução do nome do projeto;
+- resolução do nome do responsável;
+- apresentação do estado e prioridade;
+- apresentação da descrição;
+- apresentação do tempo acumulado;
+- apresentação do estado do temporizador;
+- apresentação da data de início do temporizador;
+- apresentação das datas de criação e atualização;
+- ligação do projeto ao respetivo detalhe;
+- tratamento de tarefas sem projeto ou responsável;
+- tratamento de identificadores inválidos;
+- tratamento de tarefas inexistentes;
+- ligação Back to tasks;
+- integração com o endpoint de início do temporizador;
+- integração com o endpoint de pausa;
+- integração com o endpoint de retoma;
+- integração com o endpoint de conclusão;
+- atualização visual do tempo a cada segundo;
+- bloqueio dos botões durante os pedidos;
+- mensagens de processamento;
+- mensagens de sucesso e erro;
+- confirmação antes da conclusão;
+- acumulação da sessão ativa ao concluir;
+- remoção dos controlos após a conclusão;
+- indicação de que uma tarefa concluída não pode reiniciar o temporizador;
+- layout responsivo para desktop e dispositivos móveis.
+
+### Decisões de implementação
+
+A tarefa, os projetos e os colaboradores são carregados em paralelo através de `Promise.all`.
+
+Enquanto o temporizador está ativo, o frontend calcula o tempo apresentado através da soma de `totalTimeSeconds` com o tempo decorrido desde `timerStartedAt`.
+
+O valor persistido continua a ser controlado pelo backend. O frontend utiliza a atualização por segundo apenas para apresentar a sessão ativa em tempo real.
+
+As operações do temporizador reutilizam uma função interna do cliente de API para os endpoints:
+
+```text
+POST /api/tasks/{id}/start-timer
+POST /api/tasks/{id}/pause-timer
+POST /api/tasks/{id}/resume-timer
+POST /api/tasks/{id}/complete
+```
+
+A conclusão utiliza uma confirmação explícita porque uma tarefa concluída não pode voltar a iniciar ou retomar o temporizador.
+
+### Ficheiros principais
+
+- `frontend/src/api/tasksApi.ts`
+- `frontend/src/index.css`
+- `frontend/src/pages/TaskDetailPage.tsx`
+- `frontend/src/pages/TasksPage.tsx`
+- `frontend/src/pages/ProjectDetailPage.tsx`
+- `frontend/src/routes/AppRoutes.tsx`
+- `README.md`
+- `frontend/README.md`
+- `LOG.md`
+
+### Validação realizada
+
+Foram confirmados:
+
+- ligação View task na lista de tarefas;
+- ligação View task no detalhe do projeto;
+- carregamento direto de `/tasks/:taskId`;
+- apresentação correta das tarefas existentes;
+- tarefa com projeto e responsável;
+- tarefa sem projeto e sem responsável;
+- estado Pending;
+- estado In Progress;
+- estado Completed;
+- estado Not running;
+- estado Running;
+- apresentação do tempo acumulado;
+- ligação para o detalhe do projeto;
+- `/tasks/abc` tratado como Task not found;
+- `/tasks/999999` tratado como Task not found;
+- atualização da página com preservação da sessão;
+- navegação autenticada mantida;
+- layout desktop validado a 100% de zoom;
+- layout móvel validado numa viewport de `390 × 844`;
+- ausência de sobreposição dos elementos;
+- ausência de scroll horizontal;
+- botões adaptados à largura do ecrã móvel.
+
+### Validação do temporizador
+
+Foi criada a tarefa temporária `Timer workflow validation` para exercer o ciclo completo.
+
+Foram confirmados:
+
+1. início com estado Pending, tempo `0s` e botão Start timer;
+2. alteração para In Progress e Running depois do início;
+3. atualização visual do tempo a cada segundo;
+4. apresentação do botão Pause timer durante a sessão;
+5. pausa com persistência do tempo acumulado;
+6. alteração do botão para Resume timer;
+7. preservação do tempo após atualização da página;
+8. retoma a partir do tempo anteriormente registado;
+9. confirmação antes da conclusão;
+10. acumulação da sessão ativa no tempo total;
+11. alteração final para Completed;
+12. remoção dos botões depois da conclusão;
+13. bloqueio da possibilidade de reiniciar o temporizador;
+14. apresentação das mensagens de sucesso;
+15. eliminação da tarefa temporária após a validação;
+16. regresso da lista original para cinco tarefas e zero temporizadores ativos.
+
+### Validação técnica
+
+- `npm run lint`: sucesso;
+- `npm run build`: sucesso;
+- 42 módulos transformados pelo Vite;
+- build concluído sem erros TypeScript;
+- CSS de produção com 17,38 kB;
+- JavaScript de produção com 268,44 kB;
+- `git diff --check` concluído sem erros.
+
+### Trabalho pendente
+
+- implementar documentação e anexos de projetos e tarefas;
+- adicionar operações de criação e edição através do frontend;
+- adicionar testes automatizados do frontend;
+- rever a estratégia de armazenamento do token antes de produção;
+- avaliar tratamento adicional de concorrência entre várias janelas.
+
+### Próxima etapa
+
+Rever o diff completo, criar o commit da branch `feature/frontend-task-detail` e abrir um pull request para `develop`.

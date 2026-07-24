@@ -24,3 +24,75 @@ export function getTaskById(
     session,
   )
 }
+
+function executeTaskAction(
+  taskId: number,
+  action:
+    | 'start-timer'
+    | 'pause-timer'
+    | 'resume-timer'
+    | 'complete',
+  session: AuthSession,
+  signal?: AbortSignal,
+): Promise<Task> {
+  return apiRequest<Task>(
+    `/api/tasks/${taskId}/${action}`,
+    {
+      method: 'POST',
+      signal,
+    },
+    session,
+  )
+}
+
+export function startTaskTimer(
+  taskId: number,
+  session: AuthSession,
+  signal?: AbortSignal,
+): Promise<Task> {
+  return executeTaskAction(
+    taskId,
+    'start-timer',
+    session,
+    signal,
+  )
+}
+
+export function pauseTaskTimer(
+  taskId: number,
+  session: AuthSession,
+  signal?: AbortSignal,
+): Promise<Task> {
+  return executeTaskAction(
+    taskId,
+    'pause-timer',
+    session,
+    signal,
+  )
+}
+
+export function resumeTaskTimer(
+  taskId: number,
+  session: AuthSession,
+  signal?: AbortSignal,
+): Promise<Task> {
+  return executeTaskAction(
+    taskId,
+    'resume-timer',
+    session,
+    signal,
+  )
+}
+
+export function completeTask(
+  taskId: number,
+  session: AuthSession,
+  signal?: AbortSignal,
+): Promise<Task> {
+  return executeTaskAction(
+    taskId,
+    'complete',
+    session,
+    signal,
+  )
+}

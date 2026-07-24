@@ -457,6 +457,46 @@ A página:
 - possui layout responsivo para desktop e dispositivos móveis.
 
 A filtragem das tarefas é atualmente realizada no frontend porque a API ainda não possui um endpoint específico como `GET /api/projects/{id}/tasks`.
+
+## Detalhe de tarefas e temporizador no frontend
+
+O frontend disponibiliza uma página protegida através da rota:
+
+```text
+/tasks/:taskId
+```
+
+A página:
+
+- obtém a tarefa através de `GET /api/tasks/{id}`;
+- resolve o projeto através de `GET /api/projects`;
+- resolve o responsável através de `GET /api/collaborators`;
+- apresenta estado, prioridade, descrição e relações;
+- apresenta o tempo acumulado e o estado do temporizador;
+- atualiza visualmente o tempo enquanto o temporizador está ativo;
+- liga o projeto associado ao respetivo detalhe;
+- trata tarefas sem projeto ou responsável;
+- trata identificadores inválidos e tarefas inexistentes;
+- mantém a sessão e a navegação autenticadas;
+- possui layout responsivo para desktop e dispositivos móveis.
+
+A página também permite executar:
+
+```text
+POST /api/tasks/{id}/start-timer
+POST /api/tasks/{id}/pause-timer
+POST /api/tasks/{id}/resume-timer
+POST /api/tasks/{id}/complete
+```
+
+Durante estas operações:
+
+- os botões ficam temporariamente desativados;
+- são apresentados estados de processamento;
+- são apresentadas mensagens de sucesso ou erro;
+- a conclusão exige confirmação;
+- o tempo da sessão ativa é acumulado ao concluir;
+- uma tarefa concluída não pode reiniciar o temporizador.
 ## Segurança e sessão do frontend
 
 A implementação atual guarda a sessão JWT em `sessionStorage` e calcula localmente a data de expiração com base no campo `expiresIn`.
