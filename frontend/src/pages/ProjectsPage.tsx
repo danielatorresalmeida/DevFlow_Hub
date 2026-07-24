@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
 import { ApiClientError } from '../api/apiClient'
 import { getCollaborators } from '../api/collaboratorsApi'
 import { getProjects } from '../api/projectsApi'
@@ -252,9 +253,16 @@ export function ProjectsPage() {
 
                       <footer className="project-card-footer">
                         <span>
-                          Tasks and documentation will be
-                          available in the project detail page.
+                          Review the project information and
+                          its associated tasks.
                         </span>
+
+                        <Link
+                          className="project-detail-link"
+                          to={`/projects/${project.id}`}
+                        >
+                          View project
+                        </Link>
                       </footer>
                     </article>
                   ))}

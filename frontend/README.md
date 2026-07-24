@@ -29,6 +29,12 @@ Frontend React do DevFlow Hub, responsável pela autenticação do utilizador, n
 - associação dos projetos aos respetivos gestores;
 - apresentação de estado, descrição, gestor e datas;
 - estados de loading, erro, retry e lista vazia nos projetos;
+- ligação de cada cartão para o respetivo detalhe;
+- rota protegida `/projects/:projectId`;
+- detalhe do projeto ligado a `GET /api/projects/{id}`;
+- apresentação das tarefas associadas ao projeto;
+- resolução dos nomes do gestor e dos responsáveis;
+- estados de projeto inexistente, identificador inválido e projeto sem tarefas;
 - lista autenticada de tarefas;
 - associação das tarefas aos respetivos projetos e responsáveis;
 - apresentação de estado, prioridade, descrição, tempo registado e datas;
@@ -58,6 +64,7 @@ frontend/src/
 │   ├── DashboardPage.tsx
 │   ├── LoginPage.tsx
 │   ├── NotFoundPage.tsx
+│   ├── ProjectDetailPage.tsx
 │   ├── ProjectsPage.tsx
 │   └── TasksPage.tsx
 ├── routes/
@@ -142,11 +149,12 @@ O build de produção é criado em `dist/`.
 ## Rotas atuais
 
 ```text
-/login       pública
-/dashboard   protegida
-/projects    protegida
-/tasks       protegida
-*            página não encontrada
+/login                  pública
+/dashboard              protegida
+/projects               protegida
+/projects/:projectId    protegida
+/tasks                  protegida
+*                       página não encontrada
 ```
 
 A rota `/` redireciona para `/dashboard`. Quando não existe uma sessão válida, o utilizador é encaminhado para `/login`.

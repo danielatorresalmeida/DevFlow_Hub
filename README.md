@@ -435,6 +435,28 @@ A resposta inclui:
 - tarefas recentes;
 - projetos com prazos futuros.
 
+## Detalhe de projetos no frontend
+
+O frontend disponibiliza uma página protegida de detalhe através da rota:
+
+```text
+/projects/:projectId
+```
+
+A página:
+
+- obtém o projeto através de `GET /api/projects/{id}`;
+- resolve o nome do gestor com os dados de `GET /api/collaborators`;
+- carrega as tarefas através de `GET /api/tasks`;
+- filtra apenas as tarefas cujo `projectId` corresponde ao projeto;
+- apresenta estado, descrição, gestor, datas e número de tarefas;
+- apresenta responsável, prioridade, estado, tempo registado e última atualização das tarefas associadas;
+- trata projetos sem tarefas;
+- trata identificadores inválidos e projetos inexistentes;
+- mantém a sessão e a navegação autenticadas;
+- possui layout responsivo para desktop e dispositivos móveis.
+
+A filtragem das tarefas é atualmente realizada no frontend porque a API ainda não possui um endpoint específico como `GET /api/projects/{id}/tasks`.
 ## Segurança e sessão do frontend
 
 A implementação atual guarda a sessão JWT em `sessionStorage` e calcula localmente a data de expiração com base no campo `expiresIn`.
