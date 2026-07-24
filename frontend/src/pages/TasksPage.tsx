@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
 import { ApiClientError } from '../api/apiClient'
 import { getCollaborators } from '../api/collaboratorsApi'
 import { getProjects } from '../api/projectsApi'
@@ -390,8 +391,17 @@ export function TasksPage() {
                       </dl>
 
                       <footer className="task-card-footer">
-                        Created{' '}
-                        {formatDateTime(task.createdAt)}
+                        <span>
+                          Created{' '}
+                          {formatDateTime(task.createdAt)}
+                        </span>
+
+                        <Link
+                          className="task-detail-link"
+                          to={`/tasks/${task.id}`}
+                        >
+                          View task
+                        </Link>
                       </footer>
                     </article>
                   ))}

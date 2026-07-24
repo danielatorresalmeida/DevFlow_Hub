@@ -468,6 +468,15 @@ export function ProjectDetailPage() {
                               </dd>
                             </div>
                           </dl>
+
+                          <footer className="project-task-footer">
+                            <Link
+                              className="task-detail-link"
+                              to={`/tasks/${task.id}`}
+                            >
+                              View task
+                            </Link>
+                          </footer>
                         </article>
                       ))}
                     </div>

@@ -4,6 +4,7 @@ import { LoginPage } from '../pages/LoginPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { ProjectDetailPage } from '../pages/ProjectDetailPage'
 import { ProjectsPage } from '../pages/ProjectsPage'
+import { TaskDetailPage } from '../pages/TaskDetailPage'
 import { TasksPage } from '../pages/TasksPage'
 import { ProtectedRoute } from './ProtectedRoute'
 
@@ -49,6 +50,15 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <TasksPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/tasks/:taskId"
+        element={
+          <ProtectedRoute>
+            <TaskDetailPage />
           </ProtectedRoute>
         }
       />
