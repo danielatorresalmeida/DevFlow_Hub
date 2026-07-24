@@ -1357,6 +1357,7 @@ Criar a primeira página autenticada de consulta de projetos no frontend React e
 - logout disponível nas páginas autenticadas;
 - preparação do cliente de API para a futura página `/projects/:id`;
 - layout responsivo para desktop e dispositivos móveis.
+
 ### Decisões de implementação
 
 Foi criado o componente reutilizável `AppHeader` para evitar a repetição da identidade do utilizador, da navegação e da operação de logout em cada página autenticada.
@@ -1415,3 +1416,98 @@ Foram confirmados:
 ### Próxima etapa
 
 Rever o diff final, criar o commit da branch `feature/frontend-projects-list` e abrir um pull request para `develop`.
+
+---
+
+## Marco 16 - 24/07/2026 - Lista autenticada de tarefas
+
+### Objetivo
+
+Criar uma página autenticada para consulta das tarefas existentes, apresentando as relações com projetos e colaboradores e mantendo o padrão visual e técnico estabelecido pelas páginas anteriores.
+
+### Funcionalidades implementadas
+
+- criação da rota protegida `/tasks`;
+- criação dos tipos TypeScript `TaskStatus`, `TaskPriority`, `Task` e `TaskListItem`;
+- integração autenticada com `GET /api/tasks`;
+- preparação do cliente de API para `GET /api/tasks/{id}`;
+- carregamento paralelo de tarefas, projetos e colaboradores;
+- associação do `projectId` ao nome do respetivo projeto;
+- associação do `assigneeId` ao nome do respetivo responsável;
+- apresentação do identificador, título, descrição, estado e prioridade;
+- apresentação do projeto e responsável associados;
+- apresentação do tempo registado em segundos, minutos ou horas;
+- apresentação das datas de criação e última atualização;
+- indicação de tarefas sem projeto ou responsável;
+- indicação do número total de tarefas e de temporizadores ativos;
+- preparação da atualização visual do tempo quando existir um temporizador ativo;
+- estados de loading, erro, retry e lista vazia;
+- inclusão de Tasks na navegação autenticada;
+- layout responsivo para desktop e dispositivos móveis.
+
+### Decisões de implementação
+
+A página carrega tarefas, projetos e colaboradores através de `Promise.all`. Depois são construídos mapas entre identificadores e nomes, permitindo apresentar relações legíveis sem alterar os contratos atuais do backend.
+
+O campo `totalTimeSeconds` é apresentado como Tracked time e representa o tempo já registado para cada tarefa.
+
+Quando `timerActive` estiver ativo e existir `timerStartedAt`, o frontend está preparado para somar visualmente a sessão atual ao tempo acumulado e atualizar o valor a cada segundo. Esta lógica não altera o valor persistido pelo backend.
+
+Os controlos para iniciar, pausar, retomar ou concluir tarefas não foram incluídos nesta etapa. Essas operações serão implementadas separadamente devido ao seu impacto no estado persistido.
+
+### Ficheiros principais
+
+- `frontend/src/api/tasksApi.ts`
+- `frontend/src/components/AppHeader.tsx`
+- `frontend/src/index.css`
+- `frontend/src/pages/TasksPage.tsx`
+- `frontend/src/routes/AppRoutes.tsx`
+- `frontend/src/types/task.ts`
+- `README.md`
+- `frontend/README.md`
+- `LOG.md`
+
+### Validação realizada
+
+Foram confirmados:
+
+- carregamento das cinco tarefas existentes no PostgreSQL;
+- navegação entre `/dashboard`, `/projects` e `/tasks`;
+- opção Tasks apresentada como ativa;
+- associação correta das tarefas aos projetos e responsáveis;
+- apresentação de `No project` quando não existe projeto;
+- apresentação de `Not assigned` quando não existe responsável;
+- apresentação dos estados e prioridades através de badges;
+- apresentação do tempo registado;
+- apresentação das datas de criação e última atualização;
+- ausência de scroll horizontal;
+- layout desktop validado a 100% de zoom;
+- layout móvel validado numa viewport de `390 × 844`;
+- cartões apresentados numa única coluna em dispositivos móveis;
+- navegação e logout mantidos acessíveis no layout móvel.
+
+O conjunto de demonstração possuía zero temporizadores ativos. Por esse motivo, a atualização visual por segundo não foi exercitada manualmente nesta validação.
+
+### Validação técnica
+
+- `npm run lint`: sucesso;
+- `npm run build`: sucesso;
+- 40 módulos transformados pelo Vite;
+- build concluído sem erros TypeScript;
+- CSS de produção com 10,41 kB;
+- JavaScript de produção com 254,26 kB;
+- `git diff --check` concluído sem erros.
+
+### Trabalho pendente
+
+- criar a página de detalhe de projeto;
+- criar a página de detalhe de tarefa;
+- apresentar as tarefas associadas dentro do detalhe do projeto;
+- implementar os controlos do temporizador;
+- implementar documentação de projeto e de tarefa;
+- adicionar operações de criação, edição e eliminação;
+- adicionar testes automatizados do frontend.
+
+### Próxima etapa
+
+Rever o diff completo, criar o commit da branch `feature/frontend-tasks-list` e abrir um pull request para `develop`.

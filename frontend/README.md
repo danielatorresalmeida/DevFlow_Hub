@@ -15,7 +15,7 @@ Frontend React do DevFlow Hub, responsável pela autenticação do utilizador, n
 
 - página de login ligada a `POST /api/auth/login`;
 - sessão JWT guardada em `sessionStorage`;
-- rotas `/dashboard` e `/projects` protegidas;
+- rotas `/dashboard`, `/projects` e `/tasks` protegidas;
 - persistência da sessão após atualização da página;
 - logout manual e expiração automática;
 - inclusão automática do Bearer token nos pedidos autenticados;
@@ -24,11 +24,16 @@ Frontend React do DevFlow Hub, responsável pela autenticação do utilizador, n
 - indicadores, tarefas recentes e projetos próximos;
 - estados de loading, erro, retry e ausência de dados;
 - cabeçalho autenticado reutilizável;
-- navegação entre dashboard e projetos;
+- navegação entre dashboard, projetos e tarefas;
 - lista autenticada de projetos;
 - associação dos projetos aos respetivos gestores;
 - apresentação de estado, descrição, gestor e datas;
 - estados de loading, erro, retry e lista vazia nos projetos;
+- lista autenticada de tarefas;
+- associação das tarefas aos respetivos projetos e responsáveis;
+- apresentação de estado, prioridade, descrição, tempo registado e datas;
+- indicação de tarefas com temporizador ativo;
+- estados de loading, erro, retry e lista vazia nas tarefas;
 - layout responsivo.
 
 ## Estrutura principal
@@ -40,7 +45,8 @@ frontend/src/
 │   ├── authApi.ts
 │   ├── collaboratorsApi.ts
 │   ├── dashboardApi.ts
-│   └── projectsApi.ts
+│   ├── projectsApi.ts
+│   └── tasksApi.ts
 ├── auth/
 │   ├── AuthContext.ts
 │   ├── AuthProvider.tsx
@@ -52,7 +58,8 @@ frontend/src/
 │   ├── DashboardPage.tsx
 │   ├── LoginPage.tsx
 │   ├── NotFoundPage.tsx
-│   └── ProjectsPage.tsx
+│   ├── ProjectsPage.tsx
+│   └── TasksPage.tsx
 ├── routes/
 │   ├── AppRoutes.tsx
 │   └── ProtectedRoute.tsx
@@ -60,7 +67,8 @@ frontend/src/
 │   ├── auth.ts
 │   ├── collaborator.ts
 │   ├── dashboard.ts
-│   └── project.ts
+│   ├── project.ts
+│   └── task.ts
 ├── index.css
 └── main.tsx
 ```
@@ -69,7 +77,7 @@ frontend/src/
 
 - Node.js compatível com Vite 8;
 - npm;
-- backend DevFlow Hub em execução para testar login e dashboard.
+- backend DevFlow Hub em execução para testar a aplicação completa.
 
 ## Instalação
 
@@ -137,6 +145,7 @@ O build de produção é criado em `dist/`.
 /login       pública
 /dashboard   protegida
 /projects    protegida
+/tasks       protegida
 *            página não encontrada
 ```
 

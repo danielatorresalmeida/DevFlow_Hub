@@ -91,8 +91,8 @@ A decisão arquitetural está documentada em [`docs/architecture/frontend-decisi
 ### Frontend React
 
 - Fundação React, TypeScript e Vite implementada.
-- Rotas `/login`, `/dashboard`, `/projects` e página de recurso não encontrado.
-- Rotas do dashboard e da lista de projetos protegidas.
+- Rotas `/login`, `/dashboard`, `/projects`, `/tasks` e página de recurso não encontrado.
+- Rotas do dashboard, da lista de projetos e da lista de tarefas protegidas.
 - Integração real com `POST /api/auth/login`.
 - Sessão autenticada guardada em `sessionStorage`.
 - Persistência da sessão após atualização da página.
@@ -106,18 +106,23 @@ A decisão arquitetural está documentada em [`docs/architecture/frontend-decisi
 - Estados de carregamento, erro, repetição do pedido e ausência de dados.
 - Interface responsiva.
 - Cabeçalho autenticado reutilizável com identidade do utilizador, navegação e logout.
-- Navegação entre Dashboard e Projects através de React Router.
+- Navegação entre Dashboard, Projects e Tasks através de React Router.
 - Lista autenticada de projetos ligada a `GET /api/projects`.
 - Dados dos gestores obtidos através de `GET /api/collaborators`.
 - Projetos apresentados com estado, descrição, gestor e datas.
 - Estados de carregamento, erro, repetição do pedido e lista vazia na página de projetos.
+- Lista autenticada de tarefas ligada a `GET /api/tasks`.
+- Projetos e responsáveis das tarefas resolvidos através de `GET /api/projects` e `GET /api/collaborators`.
+- Tarefas apresentadas com estado, prioridade, projeto, responsável, tempo registado e datas de auditoria.
+- Indicação do número de temporizadores ativos e preparação da atualização visual do tempo quando um temporizador estiver em execução.
+- Estados de carregamento, erro, repetição do pedido e lista vazia na página de tarefas.
 - Layout validado em desktop e numa viewport móvel de `390 × 844`.
 - `npm run lint` e `npm run build` validados com sucesso.
 
 ### Trabalho ainda pendente
 
 - Página de detalhe de projeto, incluindo tarefas e documentação associada.
-- Listas e páginas de detalhe para tarefas, colaboradores e programas internos.
+- Página de detalhe de tarefa e listas ou páginas de detalhe para colaboradores e programas internos.
 - Criação, edição e eliminação de recursos através do frontend.
 - Controlo do temporizador através da interface React.
 - Interface de alteração e redefinição segura de palavra-passe.
