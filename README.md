@@ -1,46 +1,61 @@
-﻿# DevFlow Hub
+# DevFlow Hub
 
 DevFlow Hub é uma aplicação web académica para gestão de colaboradores, projetos, tarefas, tempo de trabalho e programas internos.
 
 ## Estado do repositório
 
-Este repositório representa uma reorganização limpa e estruturada do projeto DevFlow Hub.
+Este repositório representa uma reorganização limpa e estruturada do projeto DevFlow Hub. O código foi desenvolvido anteriormente num repositório de trabalho e foi reorganizado para:
 
-O código foi desenvolvido anteriormente num repositório de trabalho. A organização atual tem como objetivos:
-
-- remover ficheiros gerados e configurações locais;
-- separar funcionalidades por branches;
-- criar commits pequenos e descritivos;
+- remover ficheiros gerados, dependências instaladas e configurações locais;
+- separar funcionalidades por branches e commits coerentes;
 - manter o README e o LOG alinhados com o código;
-- preparar uma entrega portátil com JAR, SQL e documentação;
-- preservar uma estrutura adequada para avaliação académica.
+- preparar uma entrega portátil com backend, frontend, SQL e documentação;
+- preservar um histórico técnico claro para avaliação académica.
 
-O histórico reorganizado não pretende alterar as datas reais de desenvolvimento. Os commits deste repositório representam a organização técnica dos principais marcos do projeto.
+As datas dos commits reorganizados representam a organização técnica do novo repositório e não substituem as datas reais registadas no `LOG.md`.
+
+## Arquitetura atual
+
+```text
+React + TypeScript + Vite
+          |
+          | HTTP, JSON e JWT Bearer
+          v
+Spring Boot REST API
+          |
+          v
+PostgreSQL
+```
+
+O frontend React é responsável pela interface, navegação, autenticação no cliente e apresentação dos dados. O backend Spring Boot é responsável pela segurança, regras de negócio, validação, persistência e respostas da API.
+
+A decisão arquitetural está documentada em [`docs/architecture/frontend-decision.md`](docs/architecture/frontend-decision.md).
 
 ## Tecnologias utilizadas
 
 ### Backend
 
 - Java 21
-- Spring Boot
+- Spring Boot 4.0.6
 - Spring MVC
-- Spring Security
+- Spring Security e OAuth2 Resource Server
 - Spring Data JPA
 - Jakarta Validation
-- Maven
+- Maven Wrapper
 
-### Frontend previsto
+### Frontend
 
-- Thymeleaf
-- React
-- TypeScript
-- Vite
-- Axios
+- React 19
+- TypeScript 6
+- Vite 8
+- React Router 7
+- Fetch API nativa
+- ESLint
 
 ### Base de dados
 
 - PostgreSQL
-- H2 para testes de integração
+- H2 em memória para testes automatizados
 
 ### Testes
 
@@ -48,116 +63,118 @@ O histórico reorganizado não pretende alterar as datas reais de desenvolviment
 - Mockito
 - MockMvc
 - Spring Boot Test
-- Smoke tests em PowerShell
-
-## Estratégia de branches
-
-- `main`: versões estáveis e prontas para entrega;
-- `develop`: integração das funcionalidades;
-- `feature/*`: novas funcionalidades;
-- `fix/*`: correções;
-- `refactor/*`: melhorias estruturais;
-- `test/*`: testes;
-- `docs/*`: documentação;
-- `chore/*`: configuração, automação e manutenção.
+- Smoke tests em PowerShell com PostgreSQL real
+- ESLint e build TypeScript/Vite no frontend
 
 ## Estado atual
 
-- Repositório reorganizado com branches e commits descritivos.
-- Estrutura PostgreSQL criada e validada numa base de dados limpa.
+### Backend e API
+
+- Estrutura PostgreSQL criada e validada numa base limpa.
 - Scripts de instalação e migração disponíveis.
-- Guia de instalação local da base de dados disponível.
-- Backend Spring Boot configurado com Java 21.
-- Entidades JPA e repositórios implementados.
-- Serviços de colaboradores, projetos, tarefas e programas internos implementados.
-- Temporizador das tarefas implementado.
-- API REST para colaboradores, projetos, tarefas e programas internos implementada.
-- Endpoint de resumo do dashboard implementado.
-- Operações REST do temporizador implementadas.
-- Tratamento global de erros da API implementado.
+- Entidades JPA, repositories e services implementados.
+- CRUD de colaboradores, projetos, tarefas e programas internos implementado.
+- Temporizador de tarefas com início, pausa, retoma, conclusão e acumulação de tempo.
+- Campos de auditoria das tarefas protegidos e geridos automaticamente.
+- Endpoint agregado `GET /api/dashboard` implementado.
+- Tratamento global de erros estruturados para HTTP `400`, `401` e `404`.
+- JSON malformado rejeitado sem expor stack traces ou detalhes internos.
 - Autenticação JWT implementada.
-- Endpoint público de login implementado.
-- Endpoints da API protegidos através de Bearer token.
-- Expiração e validação de tokens implementadas.
+- Login público em `POST /api/auth/login`.
+- Restantes endpoints em `/api/**` protegidos com Bearer token.
+- Tokens com expiração de 900 segundos.
 - Colaboradores inativos impedidos de iniciar sessão.
-- Alteração de palavra-passe associada ao colaborador autenticado através do JWT.
-- JAR executável gerado através do Maven Wrapper.
-- Testes unitários do domínio, utilitários e serviços implementados.
-- Testes MockMvc do controlador de tarefas implementados.
-- Teste de arranque do contexto Spring Boot implementado.
-- Perfil de testes configurado com uma base H2 em memória.
-- Suite validada com 38 testes, sem falhas, erros ou testes ignorados.
-- Backend executado com sucesso ligado a uma base PostgreSQL real.
-- Esquema PostgreSQL validado através de `spring.jpa.hibernate.ddl-auto=validate`.
-- Endpoints principais da API validados através de smoke tests automatizados.
-- CRUD de colaboradores, projetos, tarefas e programas internos validado com PostgreSQL.
-- Relações entre colaboradores, projetos, tarefas e gestores validadas.
-- Ciclo completo do temporizador das tarefas validado.
-- Regras de estado, prioridade, datas e referências inexistentes validadas.
-- Respostas HTTP `400`, `401` e `404` validadas.
-- Pedidos com JSON malformado devolvem HTTP `400` estruturado, sem stack trace ou detalhes internos.
-- Limpeza automática e reposição das contagens iniciais validadas.
-- Script PowerShell de smoke tests disponível em `scripts/smoke-test-api.ps1`.
+- Alteração de palavra-passe associada ao colaborador autenticado através da claim `sub`.
+- Backend validado com PostgreSQL real e `ddl-auto=validate`.
+- Suite backend validada com 38 testes sem falhas.
+
+### Frontend React
+
+- Fundação React, TypeScript e Vite implementada.
+- Rotas `/login`, `/dashboard` e página de recurso não encontrado.
+- Rota do dashboard protegida.
+- Integração real com `POST /api/auth/login`.
+- Sessão autenticada guardada em `sessionStorage`.
+- Persistência da sessão após atualização da página.
+- Logout manual e expiração automática da sessão.
+- Cabeçalho `Authorization: Bearer <token>` aplicado aos pedidos autenticados.
+- Tratamento global de respostas `401`, limpeza da sessão e redirecionamento para `/login`.
+- Dashboard autenticado ligado a `GET /api/dashboard`.
+- Indicadores reais de colaboradores, projetos, tarefas, programas e tempo registado.
+- Distribuição de tarefas por estado.
+- Apresentação de tarefas recentes e projetos com prazos próximos.
+- Estados de carregamento, erro, repetição do pedido e ausência de dados.
+- Interface responsiva.
+- `npm run lint` e `npm run build` validados com sucesso.
 
 ### Trabalho ainda pendente
 
-- Testes de integração executados pelo Maven com uma instância PostgreSQL dedicada.
-- Validação de encoding em ambientes adicionais fora do Windows PowerShell 5.1.
-- Fluxo seguro de redefinição de palavra-passe para contas sem credenciais conhecidas.
-- Interface Thymeleaf.
-- Frontend React.
-- Validação do JAR final numa instalação independente.
+- Páginas completas para projetos, tarefas, colaboradores e programas internos.
+- Criação, edição e eliminação de recursos através do frontend.
+- Controlo do temporizador através da interface React.
+- Interface de alteração e redefinição segura de palavra-passe.
+- Testes automatizados de componentes e fluxos do frontend.
+- Testes Maven de integração com uma instância PostgreSQL dedicada.
+- Revisão da estratégia de armazenamento e renovação do token antes de produção.
+- Validação do JAR final e do frontend compilado numa instalação independente.
+- Remoção da dependência Thymeleaf do backend, após confirmação de que não será necessária para a entrega.
 
-## Autora
+## Estrutura principal
 
-Daniela Torres Almeida
+```text
+DevFlow_Hub/
+├── backend/
+│   └── src/
+├── database/
+│   ├── migrations/
+│   ├── devflow_hub.sql
+│   ├── migrate_existing_database.sql
+│   └── README.md
+├── docs/
+│   └── architecture/
+├── frontend/
+│   ├── public/
+│   └── src/
+├── scripts/
+│   └── smoke-test-api.ps1
+├── LOG.md
+└── README.md
+```
 
 ## Base de dados
 
 O DevFlow Hub utiliza PostgreSQL para persistir colaboradores, projetos, tarefas e programas internos.
 
-Os ficheiros da base de dados encontram-se em:
+Os ficheiros principais encontram-se em:
 
 ```text
 database/
+├── migrations/
 ├── devflow_hub.sql
 ├── migrate_existing_database.sql
 ├── INSTALACAO_BASE_DADOS_LOCAL.txt
 └── README.md
 ```
 
-- `INSTALACAO_BASE_DADOS_LOCAL.txt` explica como preparar a base de dados numa máquina local.
 - `devflow_hub.sql` cria uma instalação nova e adiciona dados de demonstração.
 - `migrate_existing_database.sql` atualiza bases criadas por versões anteriores.
-- `database/README.md` contém as instruções de instalação e migração.
+- `migrations/` contém migrações específicas e datadas.
+- `INSTALACAO_BASE_DADOS_LOCAL.txt` explica como preparar uma base local.
+- `database/README.md` documenta instalação, migração e validação.
 
-### Validação realizada
+### Dados de demonstração validados
 
-O script principal foi executado numa base PostgreSQL vazia chamada `devflow_hub_validation`.
-
-Foram confirmados:
-
-- as tabelas `collaborators`, `projects`, `tasks` e `internal_programs`;
-- 6 colaboradores de demonstração;
+- 6 colaboradores;
 - 4 projetos;
 - 5 tarefas;
 - 4 programas internos;
-- `internal_programs.manager_id` referencia `collaborators.id`;
-- `projects.manager_id` referencia `collaborators.id`;
-- `tasks.assignee_id` referencia `collaborators.id`;
-- `tasks.project_id` referencia `projects.id`.
+- foreign keys entre projetos, tarefas, programas e colaboradores.
 
-### Instalação local
-
-As instruções completas para criar a base de dados numa máquina local estão disponíveis em:
-
-[`database/INSTALACAO_BASE_DADOS_LOCAL.txt`](database/INSTALACAO_BASE_DADOS_LOCAL.txt)
+As instruções completas estão em [`database/INSTALACAO_BASE_DADOS_LOCAL.txt`](database/INSTALACAO_BASE_DADOS_LOCAL.txt).
 
 ## Backend
 
-O backend do DevFlow Hub utiliza Java 21, Spring Boot, Spring Security, Spring Data JPA e PostgreSQL.
-
-A organização segue uma arquitetura por camadas:
+A organização principal do backend segue uma arquitetura por camadas:
 
 ```text
 backend/src/main/java/com/devflowhub/backend/
@@ -175,36 +192,20 @@ backend/src/main/java/com/devflowhub/backend/
 
 ### Responsabilidades
 
-- `config`: configurações técnicas partilhadas, incluindo a configuração de segurança;
-- `controller`: endpoints REST da aplicação;
+- `config`: configurações técnicas, segurança e JWT;
+- `controller`: endpoints REST;
 - `domain`: estados, prioridades e valores permitidos;
-- `dto`: objetos utilizados para transportar pedidos e respostas da API;
-- `entity`: entidades JPA associadas às tabelas PostgreSQL;
-- `exception`: exceções reutilizáveis e tratamento global de erros;
-- `repository`: acesso aos dados com Spring Data JPA;
-- `security`: filtros de autenticação JWT e integração com o Spring Security;
-- `service`: regras de negócio e consultas agregadas da aplicação;
+- `dto`: pedidos e respostas da API;
+- `entity`: entidades JPA;
+- `exception`: exceções e tratamento global de erros;
+- `repository`: acesso aos dados;
+- `security`: integração da autenticação JWT com Spring Security;
+- `service`: regras de negócio e consultas agregadas;
 - `util`: funções comuns de normalização.
 
-### Funcionalidades implementadas
-
-- gestão de colaboradores;
-- autenticação de colaboradores através de JWT;
-- alteração de palavra-passe mediante autenticação;
-- bloqueio de login para colaboradores inativos;
-- gestão de projetos e responsáveis;
-- gestão de tarefas;
-- prioridades `LOW`, `MEDIUM` e `HIGH`;
-- estados `PENDING`, `IN_PROGRESS`, `REVIEW` e `COMPLETED`;
-- início, pausa, retoma e conclusão do temporizador;
-- gestão de programas internos;
-- validação das relações entre entidades.
-
-## Configuração e execução
+## Configuração do backend
 
 ### Variáveis de ambiente
-
-O backend pode ser configurado através das seguintes variáveis:
 
 ```text
 DB_URL
@@ -226,28 +227,20 @@ $env:JWT_SECRET = "<segredo-de-desenvolvimento-com-comprimento-suficiente>"
 $env:JWT_ISSUER = "devflow-hub"
 ```
 
-As credenciais e os segredos não devem ser guardados nem enviados para o repositório Git.
+Credenciais, passwords e segredos não devem ser guardados no Git.
 
-### Compilar o backend
-
-A partir da raiz do repositório:
+### Compilar e testar
 
 ```powershell
 Set-Location ".\backend"
-.\mvnw.cmd -DskipTests compile
+.\mvnw.cmd clean test
 ```
 
-### Iniciar o backend
+### Iniciar
 
 ```powershell
 Set-Location ".\backend"
 .\mvnw.cmd spring-boot:run
-```
-
-O backend deve terminar o arranque com uma mensagem semelhante a:
-
-```text
-Started BackendApplication
 ```
 
 A API fica disponível em:
@@ -256,9 +249,77 @@ A API fica disponível em:
 http://localhost:8080/api
 ```
 
-## API REST
+### Empacotar
 
-O DevFlow Hub disponibiliza uma API REST para gerir os principais recursos da aplicação.
+```powershell
+Set-Location ".\backend"
+.\mvnw.cmd clean package -DskipTests
+```
+
+O JAR é gerado em:
+
+```text
+backend/target/devflow-hub.jar
+```
+
+## Frontend
+
+O frontend possui documentação adicional em [`frontend/README.md`](frontend/README.md).
+
+### Pré-requisitos
+
+- Node.js compatível com Vite 8;
+- npm;
+- backend em execução na porta `8080` para testar a aplicação completa.
+
+### Instalar dependências
+
+```powershell
+Set-Location ".\frontend"
+npm install
+```
+
+### Configuração da API
+
+O ficheiro de exemplo contém:
+
+```text
+VITE_API_BASE_URL=
+```
+
+Em desenvolvimento local, o valor pode permanecer vazio. O servidor Vite encaminha os pedidos iniciados por `/api` para `http://localhost:8080`.
+
+Para um backend alojado noutra origem, cria `frontend/.env.local` e define, por exemplo:
+
+```text
+VITE_API_BASE_URL=https://api.exemplo.com
+```
+
+O ficheiro `.env.local` é local e não deve ser enviado para o repositório.
+
+### Iniciar o frontend
+
+```powershell
+Set-Location ".\frontend"
+npm run dev
+```
+
+Por predefinição, a aplicação fica disponível em:
+
+```text
+http://localhost:5173
+```
+
+### Validar o frontend
+
+```powershell
+npm run lint
+npm run build
+```
+
+O build de produção é gerado em `frontend/dist/`, que permanece fora do Git.
+
+## API REST
 
 ### Autenticação
 
@@ -267,13 +328,39 @@ POST /api/auth/login
 PUT  /api/auth/change-password
 ```
 
-O endpoint `POST /api/auth/login` é público e valida as credenciais do colaborador.
+O login é público. A alteração de palavra-passe requer autenticação.
 
-Quando as credenciais são válidas, a API devolve um JSON Web Token, JWT, que deve ser utilizado como Bearer token para aceder aos endpoints protegidos.
+Exemplo de pedido:
 
-O endpoint `PUT /api/auth/change-password` requer autenticação. O colaborador é identificado através do campo `sub` do JWT, não sendo aceite um identificador de colaborador fornecido pelo cliente.
+```json
+{
+  "email": "<email-do-colaborador>",
+  "password": "<palavra-passe-do-colaborador>"
+}
+```
 
-Colaboradores inativos não podem iniciar sessão.
+Exemplo abreviado de resposta:
+
+```json
+{
+  "accessToken": "<jwt-token>",
+  "tokenType": "Bearer",
+  "expiresIn": 900,
+  "collaborator": {
+    "id": 1,
+    "name": "<nome-do-colaborador>",
+    "email": "<email-do-colaborador>",
+    "role": "<função>",
+    "active": true
+  }
+}
+```
+
+Os pedidos protegidos devem incluir:
+
+```http
+Authorization: Bearer <jwt-token>
+```
 
 ### Colaboradores
 
@@ -303,17 +390,12 @@ GET    /api/tasks/{id}
 POST   /api/tasks
 PUT    /api/tasks/{id}
 DELETE /api/tasks/{id}
-```
-
-A API também disponibiliza operações específicas para o temporizador:
-
-```text
-POST /api/tasks/{id}/start-timer
-POST /api/tasks/{id}/pause-timer
-POST /api/tasks/{id}/resume-timer
-GET  /api/tasks/{id}/total-time
-GET  /api/tasks/{id}/timer
-POST /api/tasks/{id}/complete
+POST   /api/tasks/{id}/start-timer
+POST   /api/tasks/{id}/pause-timer
+POST   /api/tasks/{id}/resume-timer
+GET    /api/tasks/{id}/total-time
+GET    /api/tasks/{id}/timer
+POST   /api/tasks/{id}/complete
 ```
 
 ### Programas internos
@@ -332,96 +414,30 @@ DELETE /api/internal-programs/{id}
 GET /api/dashboard
 ```
 
-O dashboard utiliza DTOs próprios para devolver um resumo dos projetos, tarefas e indicadores da aplicação.
+A resposta inclui:
 
-## Autenticação e segurança da API
+- totais de colaboradores, projetos, tarefas e programas;
+- contagem de tarefas por estado;
+- tempo total registado;
+- tarefas recentes;
+- projetos com prazos futuros.
 
-### Endpoint público
+## Segurança e sessão do frontend
 
-O login é o único endpoint público funcional da API:
+A implementação atual guarda a sessão JWT em `sessionStorage` e calcula localmente a data de expiração com base no campo `expiresIn`.
 
-```http
-POST /api/auth/login
-```
+A sessão é eliminada quando:
 
-Exemplo de pedido:
+- o utilizador termina a sessão;
+- o tempo de validade termina;
+- uma chamada autenticada devolve HTTP `401`;
+- os dados armazenados são inválidos.
 
-```json
-{
-  "email": "ana.silva@devflowhub.pt",
-  "password": "DevFlowLocal-2026!"
-}
-```
-
-Exemplo de resposta:
-
-```json
-{
-  "accessToken": "<jwt-token>",
-  "tokenType": "Bearer",
-  "expiresIn": 900,
-  "collaborator": {
-    "id": 5,
-    "email": "ana.silva@devflowhub.pt",
-    "role": "Frontend Developer",
-    "active": true
-  }
-}
-```
-
-O token de acesso expira após 900 segundos.
-
-### Endpoints protegidos
-
-Os restantes endpoints em `/api/**` requerem um JWT válido.
-
-O token deve ser enviado no cabeçalho `Authorization`:
-
-```http
-Authorization: Bearer <jwt-token>
-```
-
-Pedidos sem token, com token inválido ou com token expirado são rejeitados com HTTP `401`.
-
-Exemplo em PowerShell:
-
-```powershell
-$loginBody = @{
-    email = "ana.silva@devflowhub.pt"
-    password = "DevFlowLocal-2026!"
-} | ConvertTo-Json
-
-$loginResponse = Invoke-RestMethod `
-    -Method Post `
-    -Uri "http://localhost:8080/api/auth/login" `
-    -ContentType "application/json" `
-    -Body $loginBody
-
-$token = $loginResponse.accessToken
-
-Invoke-RestMethod `
-    -Method Get `
-    -Uri "http://localhost:8080/api/tasks" `
-    -Headers @{
-        Authorization = "Bearer $token"
-    }
-```
-
-### Alteração da palavra-passe
-
-O colaborador autenticado é identificado através da claim `sub` do JWT.
-
-O endpoint de alteração da palavra-passe não aceita um identificador de colaborador fornecido pelo cliente. Esta regra impede que um colaborador tente alterar a palavra-passe de outra conta através da modificação do pedido.
-
-Depois da alteração, o colaborador pode iniciar sessão com a nova palavra-passe.
-
-### Colaboradores inativos
-
-Colaboradores marcados como inativos não podem iniciar sessão, mesmo quando o email e a palavra-passe enviados estão corretos.
+Esta solução é adequada para a fase académica atual. Antes de uma utilização de produção, deve ser revista a estratégia de armazenamento do token, mitigação de XSS, renovação de sessão e eventual utilização de cookies `HttpOnly`, `Secure` e `SameSite`.
 
 ## Tratamento de erros
 
-A API possui tratamento global de exceções para:
+A API possui tratamento estruturado para:
 
 - recursos não encontrados;
 - operações inválidas;
@@ -431,48 +447,18 @@ A API possui tratamento global de exceções para:
 - JSON malformado;
 - erros inesperados da aplicação.
 
-As respostas de erro não expõem stack traces, hashes de palavras-passe ou detalhes internos da aplicação.
-
-## Empacotamento
-
-O backend pode ser compilado e empacotado através do Maven Wrapper:
-
-```powershell
-Set-Location ".\backend"
-.\mvnw.cmd clean package -DskipTests
-```
-
-O JAR executável é gerado em:
-
-```text
-backend/target/devflow-hub.jar
-```
+As respostas não expõem stack traces, hashes de palavras-passe nem detalhes internos.
 
 ## Testes automatizados
 
-O backend utiliza JUnit 5, Mockito, MockMvc, Spring Boot Test e H2.
-
-Os testes atuais abrangem:
-
-- valores e regras da camada de domínio;
-- normalização de texto;
-- regras dos colaboradores;
-- regras dos projetos;
-- regras dos programas internos;
-- agregação de dados do dashboard;
-- estados e temporizador das tarefas;
-- endpoints do controller de tarefas;
-- arranque completo do contexto Spring Boot;
-- configuração JPA com uma base H2 em memória.
-
-A suite completa pode ser executada com:
+### Backend
 
 ```powershell
 Set-Location ".\backend"
 .\mvnw.cmd clean test
 ```
 
-Na validação realizada em 23/07/2026, foram executados:
+Na validação realizada em 23/07/2026:
 
 ```text
 Tests run: 38
@@ -482,17 +468,17 @@ Skipped: 0
 BUILD SUCCESS
 ```
 
-O perfil de testes utiliza:
+### Frontend
 
-```text
-backend/src/test/resources/application-test.properties
+```powershell
+Set-Location ".\frontend"
+npm run lint
+npm run build
 ```
 
-A base H2 é criada apenas em memória durante os testes e não substitui a validação final com PostgreSQL.
+Na validação realizada em 24/07/2026, ambos os comandos terminaram com sucesso.
 
 ## Smoke tests da API com PostgreSQL
-
-O repositório inclui um script PowerShell para validar a API REST com uma base PostgreSQL local.
 
 O script encontra-se em:
 
@@ -500,18 +486,7 @@ O script encontra-se em:
 scripts/smoke-test-api.ps1
 ```
 
-### Pré-requisitos
-
-- Java 21;
-- PostgreSQL em execução localmente;
-- base de dados `devflow_hub` criada;
-- esquema da base de dados instalado;
-- porta `8080` disponível;
-- variáveis de ambiente da base de dados e do JWT configuradas.
-
-### Executar os smoke tests
-
-Com o backend em execução, abre um segundo terminal PowerShell na raiz do repositório e executa:
+Com o backend em execução:
 
 ```powershell
 powershell.exe `
@@ -520,36 +495,7 @@ powershell.exe `
     -File ".\scripts\smoke-test-api.ps1"
 ```
 
-O script valida:
-
-- geração de JWT após um login válido;
-- rejeição de pedidos sem token;
-- rejeição de tokens inválidos;
-- acesso aos endpoints protegidos com um Bearer token válido;
-- rejeição de colaboradores inativos com HTTP `401`;
-- alteração de palavra-passe através do colaborador identificado no claim `sub`;
-- login com a nova palavra-passe;
-- rejeição da palavra-passe anterior;
-- ocultação da palavra-passe e do respetivo hash nas respostas;
-- endpoints principais de colaboradores, projetos, tarefas, programas internos e dashboard;
-- presença dos principais campos do dashboard;
-- CRUD completo de colaboradores, projetos, tarefas e programas internos;
-- relações de gestor, projeto e responsável;
-- estados e prioridades permitidos;
-- datas iniciais e finais;
-- campos obrigatórios e referências inexistentes;
-- proteção dos campos internos do temporizador durante a criação;
-- início, pausa, retoma e conclusão do temporizador;
-- acumulação do tempo de diferentes sessões;
-- proteção do estado enquanto o temporizador está ativo;
-- rejeição da pausa de um temporizador inativo;
-- rejeição do reinício do temporizador de uma tarefa concluída;
-- rejeição de JSON malformado com resposta estruturada;
-- ausência de `trace`, `error`, `exception` e `path` nas respostas de erro;
-- respostas estruturadas HTTP `400`, `401` e `404`;
-- eliminação dos recursos temporários por ordem de dependência;
-- reposição das contagens iniciais após a execução;
-- limpeza automática dos dados temporários em caso de falha.
+O script valida autenticação JWT, proteção dos endpoints, CRUD, relações, regras de negócio, temporizador, campos de auditoria, tratamento de erros e limpeza dos dados temporários.
 
 Uma execução bem-sucedida termina com:
 
@@ -557,9 +503,7 @@ Uma execução bem-sucedida termina com:
 All PostgreSQL API smoke tests passed.
 ```
 
-### Utilizar outro endereço da API
-
-O endereço da API pode ser alterado através do parâmetro `BaseUrl`:
+Outro endereço pode ser fornecido com:
 
 ```powershell
 powershell.exe `
@@ -569,4 +513,17 @@ powershell.exe `
     -BaseUrl "http://localhost:8080"
 ```
 
-O script devolve um código de saída diferente de zero quando algum teste falha.
+## Estratégia de branches
+
+- `main`: versões estáveis e prontas para entrega;
+- `develop`: integração das funcionalidades;
+- `feature/*`: novas funcionalidades;
+- `fix/*`: correções;
+- `refactor/*`: melhorias estruturais;
+- `test/*`: testes;
+- `docs/*`: documentação;
+- `chore/*`: configuração, automação e manutenção.
+
+## Autora
+
+Daniela Torres Almeida

@@ -1,10 +1,12 @@
-﻿import {
+import {
   useCallback,
   useEffect,
   useMemo,
   useState,
   type PropsWithChildren,
 } from 'react'
+import { UNAUTHORIZED_EVENT } from '../api/apiClient'
+import type { AuthSession, LoginResponse } from '../types/auth'
 import { AuthContext } from './AuthContext'
 import {
   clearAuthSession,
@@ -12,7 +14,6 @@ import {
   readAuthSession,
   saveAuthSession,
 } from './authStorage'
-import type { AuthSession, LoginResponse } from '../types/auth'
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<AuthSession | null>(
@@ -32,11 +33,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [])
 
   useEffect(() => {
+    function handleUnauthorizedSession() {
+      signOut()
+    }
+
+    window.addEventListener(
+      UNAUTHORIZED_EVENT,
+      handleUnauthorizedSession,
+    )
+
+    return () => {
+      window.removeEventListener(
+        UNAUTHORIZED_EVENT,
+        handleUnauthorizedSession,
+      )
+    }
+  }, [signOut])
+
+  useEffect(() => {
     if (!session) {
       return
     }
 
-    const remainingTime = session.expiresAt - Date.now()
+    const remainingTime = Math.max(
+      session.expiresAt - Date.now(),
+      0,
+    )
 
     const timeoutId = window.setTimeout(() => {
       signOut()

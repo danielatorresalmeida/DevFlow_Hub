@@ -1,4 +1,6 @@
-﻿import type { ApiError, AuthSession } from '../types/auth'
+import type { ApiError, AuthSession } from '../types/auth'
+
+export const UNAUTHORIZED_EVENT = 'devflow:unauthorized'
 
 export class ApiClientError extends Error {
   readonly status: number
@@ -16,15 +18,22 @@ export class ApiClientError extends Error {
   }
 }
 
-const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? ''
+const configuredBaseUrl =
+  import.meta.env.VITE_API_BASE_URL?.trim() ?? ''
+
 const apiBaseUrl = configuredBaseUrl.replace(/\/+$/, '')
 
 function buildUrl(path: string): string {
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const normalizedPath = path.startsWith('/')
+    ? path
+    : `/${path}`
+
   return `${apiBaseUrl}${normalizedPath}`
 }
 
-async function createApiError(response: Response): Promise<ApiClientError> {
+async function createApiError(
+  response: Response,
+): Promise<ApiClientError> {
   try {
     const body = (await response.json()) as Partial<ApiError>
 
@@ -39,6 +48,14 @@ async function createApiError(response: Response): Promise<ApiClientError> {
       'The request could not be completed.',
     )
   }
+}
+
+function notifyUnauthorizedSession(): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
 }
 
 export async function apiRequest<T>(
@@ -65,7 +82,13 @@ export async function apiRequest<T>(
   })
 
   if (!response.ok) {
-    throw await createApiError(response)
+    const error = await createApiError(response)
+
+    if (response.status === 401 && session) {
+      notifyUnauthorizedSession()
+    }
+
+    throw error
   }
 
   if (response.status === 204) {

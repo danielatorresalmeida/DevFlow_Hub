@@ -1,8 +1,16 @@
-﻿# Frontend Architecture Decision
+# Frontend Architecture Decision
 
 ## Status
 
-Accepted
+Accepted and implemented
+
+## Implementation status
+
+The React and TypeScript foundation was integrated into `develop` on 23 July 2026.
+
+The JWT login flow, protected dashboard route, session persistence, automatic expiry and logout were integrated on 24 July 2026.
+
+The authenticated dashboard now consumes `GET /api/dashboard`, presents real summary data and clears the client session when an authenticated API request returns HTTP `401`.
 
 ## Context
 
@@ -150,7 +158,7 @@ Thymeleaf is also not required for secure cookies. Spring Boot can manage `HttpO
 
 ## Frontend tools
 
-The frontend foundation will use:
+The frontend foundation uses:
 
 - React
 - TypeScript

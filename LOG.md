@@ -975,10 +975,12 @@ A validação com PostgreSQL real confirmou:
 
 O smoke test PostgreSQL foi ampliado para manter estes cenários como regressão.
 
-### Limitação atual
+### Limitação naquele momento
 
-O endpoint de login apenas valida credenciais e devolve dados públicos. Ainda
-não cria sessão, cookie ou token e ainda não protege os restantes endpoints.
+O endpoint de login apenas validava credenciais e devolvia dados públicos. Ainda
+não criava sessão, cookie ou token e ainda não protegia os restantes endpoints.
+
+Esta limitação foi resolvida no Marco 10 com a implementação de JWT e Spring Security.
 
 ### Ficheiros principais
 
@@ -999,3 +1001,333 @@ não cria sessão, cookie ou token e ainda não protege os restantes endpoints.
 
 Definir e implementar autenticação persistente com sessão HTTP ou JWT e
 proteger os endpoints que exigem um colaborador autenticado.
+
+---
+
+## Marco 10 - 23/07/2026 - Autenticação JWT e proteção da API
+
+### Objetivo
+
+Transformar o login já existente num fluxo de autenticação persistente através de JWT e proteger os endpoints da API.
+
+### Funcionalidades implementadas
+
+- configuração do Spring Security como OAuth2 Resource Server;
+- geração e assinatura de JSON Web Tokens;
+- token do tipo `Bearer` com validade de 900 segundos;
+- configuração de `JWT_SECRET` e `JWT_ISSUER` através de variáveis de ambiente;
+- `POST /api/auth/login` mantido como endpoint público;
+- proteção dos restantes endpoints em `/api/**`;
+- identificação do colaborador através da claim `sub`;
+- alteração de palavra-passe ligada ao colaborador autenticado;
+- rejeição de colaboradores inativos;
+- resposta HTTP `401` estruturada para token ausente, inválido ou expirado;
+- ampliação dos testes unitários, MockMvc, integração de segurança e smoke tests.
+
+### Validação
+
+Foram confirmados:
+
+- login válido com emissão de JWT;
+- rejeição de credenciais inválidas;
+- acesso a endpoint protegido com Bearer token válido;
+- rejeição de pedidos sem token;
+- rejeição de token inválido;
+- rejeição de colaborador inativo;
+- alteração de palavra-passe utilizando a identidade do token;
+- ocultação de passwords e hashes nas respostas.
+
+Resultado da suite:
+
+```text
+Tests run: 38
+Failures: 0
+Errors: 0
+Skipped: 0
+BUILD SUCCESS
+```
+
+O smoke test PostgreSQL terminou com:
+
+```text
+All PostgreSQL API smoke tests passed.
+```
+
+### Ficheiros principais
+
+- `backend/src/main/java/com/devflowhub/backend/config/JwtConfig.java`
+- `backend/src/main/java/com/devflowhub/backend/config/JwtProperties.java`
+- `backend/src/main/java/com/devflowhub/backend/config/SecurityConfig.java`
+- `backend/src/main/java/com/devflowhub/backend/security/ApiAuthenticationEntryPoint.java`
+- `backend/src/main/java/com/devflowhub/backend/service/JwtTokenService.java`
+- `backend/src/main/java/com/devflowhub/backend/dto/LoginResponse.java`
+- testes de autenticação e segurança;
+- `scripts/smoke-test-api.ps1`;
+- `README.md`.
+
+### Git
+
+- commit principal: `bd6a640`;
+- merge em `develop`: `7a6e2c3`;
+- pull request: `#11`.
+
+### Estado atual
+
+- a API exige autenticação JWT;
+- o login é o único endpoint público funcional em `/api/**`;
+- o backend devolve dados suficientes para o frontend criar uma sessão autenticada.
+
+### Próxima etapa
+
+Proteger e validar os campos de auditoria das tarefas antes de iniciar a fundação do frontend React.
+
+---
+
+## Marco 11 - 23/07/2026 - Proteção dos campos de auditoria das tarefas
+
+### Objetivo
+
+Garantir que `createdAt` e `updatedAt` são controlados pela aplicação e persistidos corretamente, sem aceitar valores arbitrários enviados pelo cliente.
+
+### Implementação
+
+- geração automática de `createdAt` e `updatedAt`;
+- preservação de `createdAt` durante atualizações;
+- atualização automática de `updatedAt`;
+- proteção contra valores de auditoria enviados no payload;
+- migração datada para bases existentes;
+- testes unitários e testes de persistência;
+- validação adicional no smoke test PostgreSQL.
+
+### Ficheiros principais
+
+- `backend/src/main/java/com/devflowhub/backend/entity/Task.java`
+- `backend/src/main/java/com/devflowhub/backend/service/TaskService.java`
+- `backend/src/test/java/com/devflowhub/backend/entity/TaskAuditFieldsTest.java`
+- `backend/src/test/java/com/devflowhub/backend/entity/TaskAuditPersistenceTest.java`
+- `database/migrations/20260723_add_task_audit_fields.sql`
+- `database/migrate_existing_database.sql`
+- `scripts/smoke-test-api.ps1`.
+
+### Validação
+
+- criação gera os dois timestamps;
+- valores enviados pelo cliente são ignorados;
+- atualização preserva `createdAt`;
+- atualização renova `updatedAt`;
+- leitura devolve os valores persistidos.
+
+### Git
+
+- commit principal: `925bbf8`;
+- merge em `develop`: `e9377ef`;
+- pull request: `#12`.
+
+### Próxima etapa
+
+Adicionar a fundação React e definir formalmente a arquitetura do frontend.
+
+---
+
+## Marco 12 - 23/07/2026 - Fundação React e decisão de arquitetura
+
+### Objetivo
+
+Criar a aplicação frontend separada do backend e estabelecer React com TypeScript como interface principal do DevFlow Hub.
+
+### Decisão arquitetural
+
+Foi decidido utilizar:
+
+- React;
+- TypeScript;
+- Vite;
+- React Router;
+- Fetch API nativa;
+- ESLint.
+
+O Spring Boot permanece como API REST responsável por autenticação, regras de negócio, validação e persistência. A decisão completa foi registada em `docs/architecture/frontend-decision.md`.
+
+### Implementação
+
+- inicialização do projeto Vite;
+- remoção dos componentes e recursos visuais do template;
+- criação das páginas de login, dashboard e recurso não encontrado;
+- criação do routing inicial;
+- redirecionamento de `/` para `/dashboard`;
+- estilos base responsivos;
+- preparação de `VITE_API_BASE_URL`;
+- configuração dos scripts `dev`, `lint`, `build` e `preview`.
+
+### Ficheiros principais
+
+- `frontend/package.json`
+- `frontend/vite.config.ts`
+- `frontend/src/main.tsx`
+- `frontend/src/routes/AppRoutes.tsx`
+- `frontend/src/pages/LoginPage.tsx`
+- `frontend/src/pages/DashboardPage.tsx`
+- `frontend/src/pages/NotFoundPage.tsx`
+- `frontend/src/index.css`
+- `docs/architecture/frontend-decision.md`.
+
+### Validação
+
+- instalação das dependências concluída;
+- servidor Vite iniciado;
+- navegação entre as rotas confirmada;
+- lint e build executados com sucesso.
+
+### Git
+
+- `6d6c710`: inicialização React e TypeScript;
+- `228798c`: decisão de arquitetura;
+- `6d0adf6`: routing inicial;
+- merge final em `develop`: `fcefa1c`;
+- pull request: `#13`.
+
+### Próxima etapa
+
+Ligar o login React ao endpoint JWT e proteger o dashboard.
+
+---
+
+## Marco 13 - 24/07/2026 - Autenticação JWT no frontend
+
+### Objetivo
+
+Ligar a interface React ao backend autenticado e implementar o ciclo completo de sessão no cliente.
+
+### Funcionalidades implementadas
+
+- cliente HTTP baseado em Fetch API;
+- integração com `POST /api/auth/login`;
+- tipos TypeScript para autenticação e erros da API;
+- `AuthContext`, `AuthProvider` e hook `useAuth`;
+- armazenamento da sessão em `sessionStorage`;
+- cálculo local de `expiresAt` com base em `expiresIn`;
+- rota protegida para `/dashboard`;
+- redirecionamento para `/login` sem sessão válida;
+- persistência da sessão após atualização da página;
+- logout manual;
+- expiração automática após 15 minutos;
+- proxy Vite de `/api` para `http://localhost:8080`;
+- configuração opcional através de `VITE_API_BASE_URL`.
+
+### Validação manual
+
+Foram confirmados:
+
+- mensagem de erro para credenciais inválidas;
+- login válido e redirecionamento para o dashboard;
+- apresentação dos dados públicos do colaborador;
+- persistência após reload;
+- logout e proteção da rota;
+- expiração automática da sessão;
+- `npm run lint` sem erros;
+- `npm run build` concluído com sucesso.
+
+### Ficheiros principais
+
+- `frontend/src/api/apiClient.ts`
+- `frontend/src/api/authApi.ts`
+- `frontend/src/auth/AuthContext.ts`
+- `frontend/src/auth/AuthProvider.tsx`
+- `frontend/src/auth/authStorage.ts`
+- `frontend/src/auth/useAuth.ts`
+- `frontend/src/routes/ProtectedRoute.tsx`
+- `frontend/src/types/auth.ts`
+- páginas, routing, estilos e configuração Vite.
+
+### Git
+
+- commit: `ff73500`;
+- merge em `develop`: `d482d42`;
+- pull request: `#14`.
+
+### Próxima etapa
+
+Substituir os conteúdos temporários do dashboard por dados reais da API e centralizar o tratamento de HTTP `401`.
+
+---
+
+## Marco 14 - 24/07/2026 - Dashboard autenticado com dados reais
+
+### Objetivo
+
+Consumir o endpoint protegido `GET /api/dashboard`, apresentar os dados reais da aplicação e terminar automaticamente a sessão quando o backend rejeita o token.
+
+### Funcionalidades implementadas
+
+- tipos TypeScript para `DashboardSummary`, tarefas recentes e projetos próximos;
+- módulo `dashboardApi`;
+- pedido autenticado a `GET /api/dashboard`;
+- cartões com totais de colaboradores, projetos, tarefas, programas e tempo registado;
+- distribuição de tarefas por estado;
+- apresentação das quatro tarefas mais recentes;
+- apresentação dos projetos com prazos futuros;
+- estados de loading, erro, retry e ausência de dados;
+- formatação de estados, datas e duração;
+- layout responsivo;
+- emissão de evento global quando um pedido autenticado devolve HTTP `401`;
+- limpeza da sessão pelo `AuthProvider`;
+- redirecionamento automático para `/login`.
+
+### Validação realizada
+
+Foram confirmados no browser:
+
+- carregamento dos valores reais existentes no PostgreSQL;
+- 6 colaboradores, 4 projetos, 5 tarefas e 4 programas no conjunto de demonstração;
+- contagens das tarefas por estado;
+- tarefas recentes com responsável, prioridade, estado e última atividade;
+- estado vazio quando não existem projetos com prazos futuros;
+- logout normal;
+- substituição manual do token por um valor inválido;
+- resposta HTTP `401` do backend;
+- remoção imediata da sessão;
+- redirecionamento para `/login`;
+- novo login válido após o teste.
+
+Validação técnica:
+
+```text
+npm run lint   -> sucesso
+npm run build  -> sucesso
+```
+
+O build Vite transformou 34 módulos e terminou sem erros TypeScript.
+
+### Ficheiros atualizados
+
+- `frontend/src/api/apiClient.ts`
+- `frontend/src/api/dashboardApi.ts`
+- `frontend/src/auth/AuthProvider.tsx`
+- `frontend/src/index.css`
+- `frontend/src/pages/DashboardPage.tsx`
+- `frontend/src/types/dashboard.ts`
+- `README.md`
+- `LOG.md`
+- `frontend/README.md`
+- `docs/architecture/frontend-decision.md`
+- `frontend/.env.example`.
+
+### Estado antes do commit
+
+- branch: `feature/frontend-authenticated-dashboard`;
+- código e documentação revistos;
+- lint e build aprovados;
+- teste manual de HTTP `401` aprovado;
+- estatísticas finais do Git ainda pendentes até à criação do commit.
+
+### Trabalho pendente
+
+- implementar as páginas detalhadas dos recursos;
+- adicionar operações de criação e edição no frontend;
+- ligar os controlos do temporizador;
+- adicionar testes automatizados do frontend;
+- rever a estratégia de armazenamento do token antes de produção.
+
+### Próxima etapa
+
+Rever o diff staged, criar o commit da branch e abrir um pull request para `develop`.
