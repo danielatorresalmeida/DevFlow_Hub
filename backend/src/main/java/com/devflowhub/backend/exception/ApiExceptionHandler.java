@@ -69,6 +69,16 @@ public class ApiExceptionHandler {
         );
     }
 
+    @ExceptionHandler(FileStorageException.class)
+    public ResponseEntity<ApiError> handleFileStorage(
+            FileStorageException exception
+    ) {
+        return buildResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                exception.getMessage(),
+                Map.of()
+        );
+    }
     private ResponseEntity<ApiError> buildResponse(
             HttpStatus status,
             String message,
