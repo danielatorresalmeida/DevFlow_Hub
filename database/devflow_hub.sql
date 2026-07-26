@@ -55,6 +55,26 @@ CREATE TABLE IF NOT EXISTS internal_programs (
     manager_id BIGINT
 );
 
+CREATE TABLE IF NOT EXISTS documents (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(150) NOT NULL,
+    content TEXT,
+    project_id BIGINT,
+    task_id BIGINT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS attachments (
+    id BIGSERIAL PRIMARY KEY,
+    document_id BIGINT NOT NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    storage_key VARCHAR(500) NOT NULL,
+    content_type VARCHAR(150),
+    size_bytes BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 2. Columns added during later project iterations
 ALTER TABLE collaborators
     ADD COLUMN IF NOT EXISTS password VARCHAR(255),
@@ -161,6 +181,21 @@ ALTER TABLE internal_programs
     ADD CONSTRAINT fk_internal_programs_manager
     FOREIGN KEY (manager_id) REFERENCES collaborators(id) ON DELETE SET NULL;
 
+ALTER TABLE documents DROP CONSTRAINT IF EXISTS fk_documents_project;
+ALTER TABLE documents
+    ADD CONSTRAINT fk_documents_project
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
+
+ALTER TABLE documents DROP CONSTRAINT IF EXISTS fk_documents_task;
+ALTER TABLE documents
+    ADD CONSTRAINT fk_documents_task
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+
+ALTER TABLE attachments DROP CONSTRAINT IF EXISTS fk_attachments_document;
+ALTER TABLE attachments
+    ADD CONSTRAINT fk_attachments_document
+    FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE;
+
 -- 5. Domain constraints
 ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_status_check;
 ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_dates_check;
@@ -189,6 +224,41 @@ ALTER TABLE internal_programs
     ADD CONSTRAINT programs_dates_check
         CHECK (end_date IS NULL OR start_date IS NULL OR end_date >= start_date);
 
+ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_owner_check;
+ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_title_not_blank_check;
+ALTER TABLE documents
+    ADD CONSTRAINT documents_owner_check
+        CHECK (
+            (
+                project_id IS NOT NULL
+                AND task_id IS NULL
+            )
+            OR
+            (
+                project_id IS NULL
+                AND task_id IS NOT NULL
+            )
+        ),
+    ADD CONSTRAINT documents_title_not_blank_check
+        CHECK (BTRIM(title) <> '');
+
+ALTER TABLE attachments
+    DROP CONSTRAINT IF EXISTS attachments_filename_not_blank_check;
+
+ALTER TABLE attachments
+    DROP CONSTRAINT IF EXISTS attachments_storage_key_not_blank_check;
+
+ALTER TABLE attachments
+    DROP CONSTRAINT IF EXISTS attachments_size_check;
+
+ALTER TABLE attachments
+    ADD CONSTRAINT attachments_filename_not_blank_check
+        CHECK (BTRIM(original_filename) <> ''),
+    ADD CONSTRAINT attachments_storage_key_not_blank_check
+        CHECK (BTRIM(storage_key) <> ''),
+    ADD CONSTRAINT attachments_size_check
+        CHECK (size_bytes >= 0);
+
 -- 6. Indexes
 CREATE UNIQUE INDEX IF NOT EXISTS ux_collaborators_email_lower ON collaborators(LOWER(email));
 CREATE INDEX IF NOT EXISTS idx_projects_manager_id ON projects(manager_id);
@@ -196,6 +266,10 @@ CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_assignee_id ON tasks(assignee_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_internal_programs_manager_id ON internal_programs(manager_id);
+CREATE INDEX IF NOT EXISTS idx_documents_project_id ON documents(project_id);
+CREATE INDEX IF NOT EXISTS idx_documents_task_id ON documents(task_id);
+CREATE INDEX IF NOT EXISTS idx_attachments_document_id ON attachments(document_id);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_attachments_storage_key ON attachments(storage_key);
 
 -- 7. Demonstration data
 -- BCrypt hashes are generated for local demonstration accounts.

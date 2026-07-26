@@ -47,7 +47,15 @@ Ficheiros principais:
   Atualiza uma base de dados criada por versões anteriores.
 
 - README.md
-  Contém informação adicional sobre o esquema e a migração.
+  Contém informação adicional sobre o esquema e as migrações.
+
+- migrations/20260724_restore_core_foreign_keys.sql
+  Restaura e valida as chaves estrangeiras principais de uma base
+  criada por uma versão anterior.
+
+- migrations/20260724_add_documents_foundation.sql
+  Cria e valida as tabelas documents e attachments, bem como as
+  respetivas relações, restrições e índices.
 
 
 ============================================================
@@ -104,6 +112,8 @@ Depois de executar o script, devem existir as seguintes tabelas:
 - projects
 - tasks
 - internal_programs
+- documents
+- attachments
 
 
 ============================================================
@@ -124,6 +134,15 @@ O esquema inclui as seguintes chaves estrangeiras:
 - internal_programs.manager_id
   referencia collaborators.id
 
+- documents.project_id
+  referencia projects.id
+
+- documents.task_id
+  referencia tasks.id
+
+- attachments.document_id
+  referencia documents.id
+
 
 ============================================================
 7. VALIDAR A INSTALAÇÃO
@@ -136,7 +155,7 @@ FROM information_schema.tables
 WHERE table_schema = 'public'
 ORDER BY table_name;
 
-O resultado deve apresentar as quatro tabelas principais.
+O resultado deve apresentar as seis tabelas principais.
 
 
 Para verificar o número de registos de demonstração:
@@ -167,6 +186,20 @@ SELECT
     COUNT(*)
 FROM internal_programs
 
+UNION ALL
+
+SELECT
+    'documents',
+    COUNT(*)
+FROM documents
+
+UNION ALL
+
+SELECT
+    'attachments',
+    COUNT(*)
+FROM attachments
+
 ORDER BY table_name;
 
 
@@ -189,6 +222,49 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
   AND tc.table_schema = 'public'
 ORDER BY tc.table_name, kcu.column_name;
 
+
+============================================================
+7.1. ATUALIZAR UMA BASE DE DADOS EXISTENTE
+============================================================
+
+Esta secção aplica-se a uma base criada por uma versão anterior do
+projeto. Não é necessária numa instalação nova criada através de:
+
+database/devflow_hub.sql
+
+
+Antes de aplicar migrações:
+
+1. Confirmar que está selecionada a base devflow_hub.
+
+2. Criar uma cópia de segurança.
+
+3. Confirmar que não existem alterações SQL não revistas.
+
+
+Executar os scripts pela seguinte ordem:
+
+1. database/migrations/20260724_restore_core_foreign_keys.sql
+
+2. database/migrations/20260724_add_documents_foundation.sql
+
+
+No pgAdmin 4, abrir cada script no Query Tool e executá-lo por
+completo, confirmando que terminou sem erros.
+
+
+A partir da raiz do projeto, também podem ser usados estes comandos:
+
+psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260724_restore_core_foreign_keys.sql
+
+psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260724_add_documents_foundation.sql
+
+
+Os dois scripts são idempotentes e podem ser executados novamente.
+
+Depois das migrações, iniciar o backend. A configuração
+spring.jpa.hibernate.ddl-auto=validate faz o arranque falhar quando
+o esquema PostgreSQL não corresponde às entidades Java.
 
 ============================================================
 8. CONFIGURAR O BACKEND
