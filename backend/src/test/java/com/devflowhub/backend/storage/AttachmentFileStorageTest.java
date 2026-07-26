@@ -180,6 +180,57 @@ class AttachmentFileStorageTest {
                 .isFalse();
     }
 
+    @Test
+    void stageDeleteMovesFileUntilCommit() {
+        String storageKey =
+                "documents/7/staged.txt";
+
+        storage.store(
+                storageKey,
+                inputStream("content")
+        );
+
+        AttachmentFileStorage.StagedDeletion staged =
+                storage.stageDelete(storageKey);
+
+        assertThat(storage.exists(storageKey))
+                .isFalse();
+
+        assertThat(staged.stagedPath())
+                .exists()
+                .hasContent("content");
+
+        storage.commitDelete(staged);
+
+        assertThat(staged.stagedPath())
+                .doesNotExist();
+    }
+
+    @Test
+    void restoreDeleteReturnsFileToOriginalLocation() {
+        String storageKey =
+                "documents/7/restored.txt";
+
+        storage.store(
+                storageKey,
+                inputStream("content")
+        );
+
+        AttachmentFileStorage.StagedDeletion staged =
+                storage.stageDelete(storageKey);
+
+        storage.restoreDelete(staged);
+
+        assertThat(storage.exists(storageKey))
+                .isTrue();
+
+        assertThat(storage.load(storageKey))
+                .hasContent("content");
+
+        assertThat(staged.stagedPath())
+                .doesNotExist();
+    }
+
     private ByteArrayInputStream inputStream(
             String content
     ) {

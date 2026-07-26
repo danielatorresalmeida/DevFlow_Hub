@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.UUID;
 
 @Service
 public class AttachmentFileStorage {
@@ -77,7 +78,7 @@ public class AttachmentFileStorage {
                     StandardCopyOption.REPLACE_EXISTING
             );
 
-            moveIntoPlace(temporaryFile, target);
+            Files.move(temporaryFile, target);
             temporaryFile = null;
         }
         catch (FileAlreadyExistsException exception) {
@@ -128,6 +129,93 @@ public class AttachmentFileStorage {
         }
     }
 
+    public StagedDeletion stageDelete(
+            String storageKey
+    ) {
+        Path target = resolveStorageKey(storageKey);
+
+        if (!Files.isRegularFile(target)) {
+            throw new ResourceNotFoundException(
+                    "Attachment file not found."
+            );
+        }
+
+        String stagedFilename =
+                "." + target.getFileName()
+                        + ".delete-"
+                        + UUID.randomUUID()
+                        + ".tmp";
+
+        Path stagedPath = target
+                .resolveSibling(stagedFilename)
+                .normalize();
+
+        try {
+            Files.move(target, stagedPath);
+
+            return new StagedDeletion(
+                    target,
+                    stagedPath
+            );
+        }
+        catch (IOException exception) {
+            throw new FileStorageException(
+                    "The attachment file could not be prepared for deletion.",
+                    exception
+            );
+        }
+    }
+
+    public void commitDelete(
+            StagedDeletion stagedDeletion
+    ) {
+        try {
+            Files.deleteIfExists(
+                    stagedDeletion.stagedPath()
+            );
+        }
+        catch (IOException exception) {
+            throw new FileStorageException(
+                    "The staged attachment file could not be deleted.",
+                    exception
+            );
+        }
+    }
+
+    public void restoreDelete(
+            StagedDeletion stagedDeletion
+    ) {
+        Path stagedPath =
+                stagedDeletion.stagedPath();
+
+        if (!Files.exists(stagedPath)) {
+            return;
+        }
+
+        Path originalPath =
+                stagedDeletion.originalPath();
+
+        if (Files.exists(originalPath)) {
+            throw new FileStorageException(
+                    "The attachment file could not be restored because its original path is occupied.",
+                    null
+            );
+        }
+
+        try {
+            Files.move(
+                    stagedPath,
+                    originalPath
+            );
+        }
+        catch (IOException exception) {
+            throw new FileStorageException(
+                    "The attachment file could not be restored.",
+                    exception
+            );
+        }
+    }
+
     private Path resolveStorageKey(String storageKey) {
         if (
                 storageKey == null
@@ -172,13 +260,6 @@ public class AttachmentFileStorage {
         );
     }
 
-    private void moveIntoPlace(
-            Path temporaryFile,
-            Path target
-    ) throws IOException {
-        Files.move(temporaryFile, target);
-    }
-
     private void deleteTemporaryFile(Path temporaryFile) {
         if (temporaryFile == null) {
             return;
@@ -190,5 +271,11 @@ public class AttachmentFileStorage {
         catch (IOException ignored) {
             // The original storage error remains the primary failure.
         }
+    }
+
+    public record StagedDeletion(
+            Path originalPath,
+            Path stagedPath
+    ) {
     }
 }
