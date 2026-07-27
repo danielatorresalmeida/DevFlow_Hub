@@ -130,7 +130,6 @@ A decisão arquitetural está documentada em [`docs/architecture/frontend-decisi
 - Testes Maven de integração com uma instância PostgreSQL dedicada.
 - Revisão da estratégia de armazenamento e renovação do token antes de produção.
 - Validação do JAR final e do frontend compilado numa instalação independente.
-- Remoção da dependência Thymeleaf do backend numa alteração de manutenção separada, uma vez que a interface principal já utiliza React.
 
 ## Estrutura principal
 
@@ -229,7 +228,6 @@ JWT_SECRET
 JWT_ISSUER
 JWT_EXPIRATION
 PORT
-THYMELEAF_CACHE
 ```
 
 Exemplo para PowerShell:
@@ -243,12 +241,9 @@ $env:JWT_SECRET = "<segredo-de-desenvolvimento-com-comprimento-suficiente>"
 $env:JWT_ISSUER = "https://devflow-hub.local"
 $env:JWT_EXPIRATION = "PT15M"
 $env:PORT = "8080"
-$env:THYMELEAF_CACHE = "false"
 ```
 
 Credenciais, palavras-passe e segredos não devem ser guardados no Git.
-
-`THYMELEAF_CACHE` permanece disponível enquanto a dependência Thymeleaf fizer parte do backend. Como a interface principal utiliza React, a remoção dessa dependência deverá ser tratada numa alteração de manutenção separada.
 
 ### Compilar e testar
 
