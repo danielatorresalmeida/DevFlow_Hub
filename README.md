@@ -130,7 +130,7 @@ A decisão arquitetural está documentada em [`docs/architecture/frontend-decisi
 - Testes Maven de integração com uma instância PostgreSQL dedicada.
 - Revisão da estratégia de armazenamento e renovação do token antes de produção.
 - Validação do JAR final e do frontend compilado numa instalação independente.
-- Remoção da dependência Thymeleaf do backend, após confirmação de que não será necessária para a entrega.
+- Remoção da dependência Thymeleaf do backend numa alteração de manutenção separada, uma vez que a interface principal já utiliza React.
 
 ## Estrutura principal
 
@@ -227,6 +227,9 @@ DB_PASSWORD
 SHOW_SQL
 JWT_SECRET
 JWT_ISSUER
+JWT_EXPIRATION
+PORT
+THYMELEAF_CACHE
 ```
 
 Exemplo para PowerShell:
@@ -237,10 +240,15 @@ $env:DB_USERNAME = "postgres"
 $env:DB_PASSWORD = "<palavra-passe-local-do-postgresql>"
 $env:SHOW_SQL = "false"
 $env:JWT_SECRET = "<segredo-de-desenvolvimento-com-comprimento-suficiente>"
-$env:JWT_ISSUER = "devflow-hub"
+$env:JWT_ISSUER = "https://devflow-hub.local"
+$env:JWT_EXPIRATION = "PT15M"
+$env:PORT = "8080"
+$env:THYMELEAF_CACHE = "false"
 ```
 
-Credenciais, passwords e segredos não devem ser guardados no Git.
+Credenciais, palavras-passe e segredos não devem ser guardados no Git.
+
+`THYMELEAF_CACHE` permanece disponível enquanto a dependência Thymeleaf fizer parte do backend. Como a interface principal utiliza React, a remoção dessa dependência deverá ser tratada numa alteração de manutenção separada.
 
 ### Compilar e testar
 
