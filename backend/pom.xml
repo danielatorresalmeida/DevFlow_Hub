@@ -31,12 +31,6 @@
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
 
-        <!-- Server-side HTML pages. -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-thymeleaf</artifactId>
-        </dependency>
-
         <!-- Form and API validation. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
