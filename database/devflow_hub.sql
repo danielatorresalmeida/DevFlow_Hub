@@ -194,7 +194,7 @@ ALTER TABLE documents
 ALTER TABLE attachments DROP CONSTRAINT IF EXISTS fk_attachments_document;
 ALTER TABLE attachments
     ADD CONSTRAINT fk_attachments_document
-    FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE;
+    FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE RESTRICT;
 
 -- 5. Domain constraints
 ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_status_check;

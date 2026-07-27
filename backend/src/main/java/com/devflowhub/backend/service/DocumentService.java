@@ -1,5 +1,6 @@
 package com.devflowhub.backend.service;
 
+import com.devflowhub.backend.entity.Attachment;
 import com.devflowhub.backend.entity.Document;
 import com.devflowhub.backend.exception.InvalidOperationException;
 import com.devflowhub.backend.exception.ResourceNotFoundException;
@@ -20,15 +21,18 @@ public class DocumentService {
     private final DocumentRepository documentRepository;
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
+    private final AttachmentService attachmentService;
 
     public DocumentService(
             DocumentRepository documentRepository,
             ProjectRepository projectRepository,
-            TaskRepository taskRepository
+            TaskRepository taskRepository,
+            AttachmentService attachmentService
     ) {
         this.documentRepository = documentRepository;
         this.projectRepository = projectRepository;
         this.taskRepository = taskRepository;
+        this.attachmentService = attachmentService;
     }
 
     public Optional<Document> findById(Long id) {
@@ -96,7 +100,19 @@ public class DocumentService {
 
     @Transactional
     public void delete(Long id) {
-        documentRepository.delete(getRequired(id));
+        Document document = getRequired(id);
+
+        for (
+                Attachment attachment
+                : attachmentService.findByDocumentId(id)
+        ) {
+            attachmentService.delete(
+                    attachment.getId()
+            );
+        }
+
+        documentRepository.delete(document);
+        documentRepository.flush();
     }
 
     private void prepareAndValidate(Document document) {

@@ -1,6 +1,7 @@
 package com.devflowhub.backend.service;
 
 import com.devflowhub.backend.domain.DomainValues;
+import com.devflowhub.backend.entity.Document;
 import com.devflowhub.backend.entity.Project;
 import com.devflowhub.backend.exception.InvalidOperationException;
 import com.devflowhub.backend.exception.ResourceNotFoundException;
@@ -20,13 +21,16 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final CollaboratorRepository collaboratorRepository;
+    private final DocumentService documentService;
 
     public ProjectService(
             ProjectRepository projectRepository,
-            CollaboratorRepository collaboratorRepository
+            CollaboratorRepository collaboratorRepository,
+            DocumentService documentService
     ) {
         this.projectRepository = projectRepository;
         this.collaboratorRepository = collaboratorRepository;
+        this.documentService = documentService;
     }
 
     public List<Project> findAll() {
@@ -70,7 +74,19 @@ public class ProjectService {
 
     @Transactional
     public void delete(Long id) {
-        projectRepository.delete(getRequired(id));
+        Project project = getRequired(id);
+
+        for (
+                Document document
+                : documentService.findByProjectId(id)
+        ) {
+            documentService.delete(
+                    document.getId()
+            );
+        }
+
+        projectRepository.delete(project);
+        projectRepository.flush();
     }
 
     private void prepareAndValidate(Project project) {
