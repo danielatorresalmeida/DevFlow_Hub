@@ -75,6 +75,17 @@ CREATE TABLE IF NOT EXISTS attachments (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS project_memberships (
+    id BIGSERIAL PRIMARY KEY,
+    project_id BIGINT NOT NULL,
+    collaborator_id BIGINT NOT NULL,
+    role VARCHAR(30) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    version BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 2. Columns added during later project iterations
 ALTER TABLE collaborators
     ADD COLUMN IF NOT EXISTS password VARCHAR(255),
@@ -196,6 +207,24 @@ ALTER TABLE attachments
     ADD CONSTRAINT fk_attachments_document
     FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE;
 
+ALTER TABLE project_memberships
+    DROP CONSTRAINT IF EXISTS fk_project_memberships_project;
+
+ALTER TABLE project_memberships
+    ADD CONSTRAINT fk_project_memberships_project
+    FOREIGN KEY (project_id)
+    REFERENCES projects(id)
+    ON DELETE CASCADE;
+
+ALTER TABLE project_memberships
+    DROP CONSTRAINT IF EXISTS fk_project_memberships_collaborator;
+
+ALTER TABLE project_memberships
+    ADD CONSTRAINT fk_project_memberships_collaborator
+    FOREIGN KEY (collaborator_id)
+    REFERENCES collaborators(id)
+    ON DELETE CASCADE;
+
 -- 5. Domain constraints
 ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_status_check;
 ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_dates_check;
@@ -259,6 +288,39 @@ ALTER TABLE attachments
     ADD CONSTRAINT attachments_size_check
         CHECK (size_bytes >= 0);
 
+ALTER TABLE project_memberships
+    DROP CONSTRAINT IF EXISTS project_memberships_role_check;
+
+ALTER TABLE project_memberships
+    ADD CONSTRAINT project_memberships_role_check
+    CHECK (
+        role IN (
+            'OWNER',
+            'MANAGER',
+            'CONTRIBUTOR',
+            'VIEWER'
+        )
+    );
+
+ALTER TABLE project_memberships
+    DROP CONSTRAINT IF EXISTS project_memberships_status_check;
+
+ALTER TABLE project_memberships
+    ADD CONSTRAINT project_memberships_status_check
+    CHECK (
+        status IN (
+            'ACTIVE',
+            'INACTIVE'
+        )
+    );
+
+ALTER TABLE project_memberships
+    DROP CONSTRAINT IF EXISTS project_memberships_version_check;
+
+ALTER TABLE project_memberships
+    ADD CONSTRAINT project_memberships_version_check
+    CHECK (version >= 0);
+
 -- 6. Indexes
 CREATE UNIQUE INDEX IF NOT EXISTS ux_collaborators_email_lower ON collaborators(LOWER(email));
 CREATE INDEX IF NOT EXISTS idx_projects_manager_id ON projects(manager_id);
@@ -270,6 +332,27 @@ CREATE INDEX IF NOT EXISTS idx_documents_project_id ON documents(project_id);
 CREATE INDEX IF NOT EXISTS idx_documents_task_id ON documents(task_id);
 CREATE INDEX IF NOT EXISTS idx_attachments_document_id ON attachments(document_id);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_attachments_storage_key ON attachments(storage_key);
+
+CREATE UNIQUE INDEX IF NOT EXISTS
+    ux_project_memberships_project_collaborator
+    ON project_memberships(
+        project_id,
+        collaborator_id
+    );
+
+CREATE INDEX IF NOT EXISTS
+    idx_project_memberships_project_status
+    ON project_memberships(
+        project_id,
+        status
+    );
+
+CREATE INDEX IF NOT EXISTS
+    idx_project_memberships_collaborator_status
+    ON project_memberships(
+        collaborator_id,
+        status
+    );
 
 -- 7. Demonstration data
 -- BCrypt hashes are generated for local demonstration accounts.
@@ -339,6 +422,71 @@ SELECT
 WHERE NOT EXISTS (
     SELECT 1 FROM tasks WHERE title = 'Prepare final documentation'
 );
+
+-- Project memberships derived from demonstration data
+
+INSERT INTO project_memberships (
+    project_id,
+    collaborator_id,
+    role,
+    status,
+    created_at,
+    updated_at
+)
+SELECT
+    project.id,
+    project.manager_id,
+    'OWNER',
+    'ACTIVE',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+FROM projects project
+WHERE project.manager_id IS NOT NULL
+ON CONFLICT (
+    project_id,
+    collaborator_id
+)
+DO UPDATE SET
+    role = 'OWNER',
+    status = 'ACTIVE',
+    version = project_memberships.version + 1,
+    updated_at = CURRENT_TIMESTAMP
+WHERE project_memberships.role IS DISTINCT FROM 'OWNER'
+   OR project_memberships.status IS DISTINCT FROM 'ACTIVE';
+
+INSERT INTO project_memberships (
+    project_id,
+    collaborator_id,
+    role,
+    status,
+    created_at,
+    updated_at
+)
+SELECT DISTINCT
+    task.project_id,
+    task.assignee_id,
+    'CONTRIBUTOR',
+    'ACTIVE',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+FROM tasks task
+WHERE task.project_id IS NOT NULL
+  AND task.assignee_id IS NOT NULL
+ON CONFLICT (
+    project_id,
+    collaborator_id
+)
+DO UPDATE SET
+    role = CASE
+        WHEN project_memberships.role = 'VIEWER'
+            THEN 'CONTRIBUTOR'
+        ELSE project_memberships.role
+    END,
+    status = 'ACTIVE',
+    version = project_memberships.version + 1,
+    updated_at = CURRENT_TIMESTAMP
+WHERE project_memberships.role = 'VIEWER'
+   OR project_memberships.status IS DISTINCT FROM 'ACTIVE';
 
 INSERT INTO internal_programs (
     name,
