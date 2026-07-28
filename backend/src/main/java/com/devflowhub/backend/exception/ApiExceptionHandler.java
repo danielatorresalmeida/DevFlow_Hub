@@ -27,6 +27,13 @@ public class ApiExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED, exception.getMessage(), Map.of());
     }
 
+    @ExceptionHandler(ProjectAccessDeniedException.class)
+    public ResponseEntity<ApiError> handleProjectAccessDenied(
+            ProjectAccessDeniedException exception
+    ) {
+        return buildResponse(HttpStatus.FORBIDDEN, exception.getMessage(), Map.of());
+    }
+
     @ExceptionHandler(InvalidOperationException.class)
     public ResponseEntity<ApiError> handleInvalidOperation(InvalidOperationException exception) {
         return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), Map.of());
