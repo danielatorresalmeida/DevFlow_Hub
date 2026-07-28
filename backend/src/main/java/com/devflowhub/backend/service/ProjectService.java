@@ -1,13 +1,16 @@
 package com.devflowhub.backend.service;
 
 import com.devflowhub.backend.domain.DomainValues;
+import com.devflowhub.backend.domain.ProjectMembershipStatus;
 import com.devflowhub.backend.entity.Project;
 import com.devflowhub.backend.exception.InvalidOperationException;
 import com.devflowhub.backend.exception.ResourceNotFoundException;
 import com.devflowhub.backend.repository.CollaboratorRepository;
 import com.devflowhub.backend.repository.ProjectRepository;
+import com.devflowhub.backend.security.CurrentCollaboratorResolver;
+import com.devflowhub.backend.security.ProjectAccessService;
+import com.devflowhub.backend.security.ProjectPermission;
 import com.devflowhub.backend.util.TextNormalizer;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,30 +23,57 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final CollaboratorRepository collaboratorRepository;
+    private final CurrentCollaboratorResolver currentCollaboratorResolver;
+    private final ProjectAccessService projectAccessService;
 
     public ProjectService(
             ProjectRepository projectRepository,
-            CollaboratorRepository collaboratorRepository
+            CollaboratorRepository collaboratorRepository,
+            CurrentCollaboratorResolver currentCollaboratorResolver,
+            ProjectAccessService projectAccessService
     ) {
         this.projectRepository = projectRepository;
         this.collaboratorRepository = collaboratorRepository;
+        this.currentCollaboratorResolver = currentCollaboratorResolver;
+        this.projectAccessService = projectAccessService;
     }
 
     public List<Project> findAll() {
-        return projectRepository.findAll(Sort.by(Sort.Direction.ASC, "name"));
+        Long collaboratorId = currentCollaboratorResolver.getRequiredId();
+
+        return projectRepository
+                .findAccessibleByCollaboratorIdAndStatus(
+                        collaboratorId,
+                        ProjectMembershipStatus.ACTIVE
+                );
     }
 
     public Optional<Project> findById(Long id) {
+        projectAccessService.requirePermission(
+                id,
+                ProjectPermission.VIEW_PROJECT
+        );
+
         return projectRepository.findById(id);
     }
 
     public Project getRequired(Long id) {
-        return projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found."));
+        projectAccessService.requirePermission(
+                id,
+                ProjectPermission.VIEW_PROJECT
+        );
+
+        return getStoredProjectRequired(id);
     }
 
     public long count() {
-        return projectRepository.count();
+        Long collaboratorId = currentCollaboratorResolver.getRequiredId();
+
+        return projectRepository
+                .countAccessibleByCollaboratorIdAndStatus(
+                        collaboratorId,
+                        ProjectMembershipStatus.ACTIVE
+                );
     }
 
     @Transactional
@@ -55,7 +85,12 @@ public class ProjectService {
 
     @Transactional
     public Project update(Long id, Project updatedData) {
-        Project existing = getRequired(id);
+        projectAccessService.requirePermission(
+                id,
+                ProjectPermission.MANAGE_PROJECT
+        );
+
+        Project existing = getStoredProjectRequired(id);
         prepareAndValidate(updatedData);
 
         existing.setName(updatedData.getName());
@@ -70,7 +105,21 @@ public class ProjectService {
 
     @Transactional
     public void delete(Long id) {
-        projectRepository.delete(getRequired(id));
+        projectAccessService.requirePermission(
+                id,
+                ProjectPermission.DELETE_PROJECT
+        );
+
+        projectRepository.delete(
+                getStoredProjectRequired(id)
+        );
+    }
+
+    private Project getStoredProjectRequired(Long id) {
+        return projectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Project not found."
+                ));
     }
 
     private void prepareAndValidate(Project project) {
