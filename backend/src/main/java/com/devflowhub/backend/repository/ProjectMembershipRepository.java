@@ -18,6 +18,13 @@ public interface ProjectMembershipRepository
                     Long collaboratorId
             );
 
+    Optional<ProjectMembership>
+            findByProjectIdAndCollaboratorIdAndStatus(
+                    Long projectId,
+                    Long collaboratorId,
+                    ProjectMembershipStatus status
+            );
+
     boolean existsByProjectIdAndCollaboratorIdAndStatus(
             Long projectId,
             Long collaboratorId,
