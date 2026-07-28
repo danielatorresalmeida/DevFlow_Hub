@@ -1,5 +1,6 @@
 package com.devflowhub.backend.service;
 
+import com.devflowhub.backend.entity.Document;
 import com.devflowhub.backend.entity.Task;
 import com.devflowhub.backend.exception.InvalidOperationException;
 import com.devflowhub.backend.repository.CollaboratorRepository;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -16,11 +18,13 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,6 +40,9 @@ class TaskServiceTest {
     @Mock
     private CollaboratorRepository collaboratorRepository;
 
+    @Mock
+    private DocumentService documentService;
+
     private TaskService taskService;
 
     @BeforeEach
@@ -49,7 +56,8 @@ class TaskServiceTest {
                 taskRepository,
                 projectRepository,
                 collaboratorRepository,
-                fixedClock
+                fixedClock,
+                documentService
         );
     }
 
@@ -126,5 +134,55 @@ class TaskServiceTest {
         assertThat(result.getTotalTimeSeconds()).isEqualTo(70L);
         assertThat(result.getTimerActive()).isFalse();
         assertThat(result.getTimerStartedAt()).isNull();
+    }
+
+@Test
+    void deleteRemovesTaskDocumentsBeforeTask() {
+        Task task = new Task();
+        task.setId(5L);
+
+        Document firstDocument = new Document();
+        firstDocument.setId(21L);
+        firstDocument.setTaskId(5L);
+
+        Document secondDocument = new Document();
+        secondDocument.setId(22L);
+        secondDocument.setTaskId(5L);
+
+        when(taskRepository.findById(5L))
+                .thenReturn(Optional.of(task));
+
+        when(documentService.findByTaskId(5L))
+                .thenReturn(
+                        List.of(
+                                firstDocument,
+                                secondDocument
+                        )
+                );
+
+        taskService.delete(5L);
+
+        InOrder deletionOrder = inOrder(
+                taskRepository,
+                documentService
+        );
+
+        deletionOrder.verify(taskRepository)
+                .findById(5L);
+
+        deletionOrder.verify(documentService)
+                .findByTaskId(5L);
+
+        deletionOrder.verify(documentService)
+                .delete(21L);
+
+        deletionOrder.verify(documentService)
+                .delete(22L);
+
+        deletionOrder.verify(taskRepository)
+                .delete(task);
+
+        deletionOrder.verify(taskRepository)
+                .flush();
     }
 }

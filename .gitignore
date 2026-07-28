@@ -1,4 +1,4 @@
-﻿# ==========================================
+# ==========================================
 # DevFlow Hub
 # Ficheiros locais e gerados
 # ==========================================
@@ -50,3 +50,7 @@ coverage/
 release/
 DevFlow_Hub_Entrega.zip
 devflow-hub.jar
+
+# Attachment files stored locally
+backend/uploads/
+/uploads/

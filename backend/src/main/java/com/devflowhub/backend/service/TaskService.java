@@ -1,6 +1,7 @@
 package com.devflowhub.backend.service;
 
 import com.devflowhub.backend.domain.DomainValues;
+import com.devflowhub.backend.entity.Document;
 import com.devflowhub.backend.entity.Task;
 import com.devflowhub.backend.exception.InvalidOperationException;
 import com.devflowhub.backend.exception.ResourceNotFoundException;
@@ -26,17 +27,20 @@ public class TaskService {
     private final ProjectRepository projectRepository;
     private final CollaboratorRepository collaboratorRepository;
     private final Clock clock;
+    private final DocumentService documentService;
 
     public TaskService(
             TaskRepository taskRepository,
             ProjectRepository projectRepository,
             CollaboratorRepository collaboratorRepository,
-            Clock clock
+            Clock clock,
+            DocumentService documentService
     ) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
         this.collaboratorRepository = collaboratorRepository;
         this.clock = clock;
+        this.documentService = documentService;
     }
 
     public List<Task> findAll() {
@@ -98,7 +102,19 @@ public class TaskService {
 
     @Transactional
     public void delete(Long id) {
-        taskRepository.delete(getRequired(id));
+        Task task = getRequired(id);
+
+        for (
+                Document document
+                : documentService.findByTaskId(id)
+        ) {
+            documentService.delete(
+                    document.getId()
+            );
+        }
+
+        taskRepository.delete(task);
+        taskRepository.flush();
     }
 
     @Transactional
