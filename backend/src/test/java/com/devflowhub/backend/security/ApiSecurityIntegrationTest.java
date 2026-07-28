@@ -42,6 +42,21 @@ class ApiSecurityIntegrationTest {
     private JwtTokenService jwtTokenService;
 
     @Test
+    void taskEndpointRejectsRequestWithoutBearerToken()
+            throws Exception {
+        mockMvc.perform(get("/api/tasks"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string(
+                        HttpHeaders.WWW_AUTHENTICATE,
+                        org.hamcrest.Matchers.startsWith("Bearer")
+                ))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message")
+                        .value("Authentication is required."))
+                .andExpect(jsonPath("$.validationErrors").isEmpty());
+    }
+
+    @Test
     void protectedEndpointRejectsRequestWithoutBearerToken()
             throws Exception {
         mockMvc.perform(get("/api/dashboard"))

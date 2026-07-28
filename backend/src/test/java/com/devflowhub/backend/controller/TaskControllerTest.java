@@ -3,6 +3,8 @@ package com.devflowhub.backend.controller;
 import com.devflowhub.backend.entity.Task;
 import com.devflowhub.backend.exception.ApiExceptionHandler;
 import com.devflowhub.backend.exception.InvalidOperationException;
+import com.devflowhub.backend.exception.ProjectAccessDeniedException;
+import com.devflowhub.backend.exception.ResourceNotFoundException;
 import com.devflowhub.backend.service.TaskService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -85,6 +88,51 @@ class TaskControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
                         .value("A completed task cannot restart its timer."));
+    }
+
+    @Test
+    void hiddenTaskReturnsStructuredHttp404() throws Exception {
+        when(taskService.getRequired(1L))
+                .thenThrow(
+                        new ResourceNotFoundException(
+                                "Task not found."
+                        )
+                );
+
+        mockMvc.perform(get("/api/tasks/1"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message")
+                        .value("Task not found."))
+                .andExpect(jsonPath("$.validationErrors").isEmpty())
+                .andExpect(jsonPath("$.trace").doesNotExist())
+                .andExpect(jsonPath("$.exception").doesNotExist());
+
+        verify(taskService).getRequired(1L);
+    }
+
+    @Test
+    void forbiddenTaskOperationReturnsStructuredHttp403()
+            throws Exception {
+        when(taskService.complete(1L))
+                .thenThrow(
+                        new ProjectAccessDeniedException()
+                );
+
+        mockMvc.perform(
+                        post("/api/tasks/1/complete")
+                )
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message").value(
+                        "You do not have permission " +
+                        "to perform this operation."
+                ))
+                .andExpect(jsonPath("$.validationErrors").isEmpty())
+                .andExpect(jsonPath("$.trace").doesNotExist())
+                .andExpect(jsonPath("$.exception").doesNotExist());
+
+        verify(taskService).complete(1L);
     }
 
     @Test
