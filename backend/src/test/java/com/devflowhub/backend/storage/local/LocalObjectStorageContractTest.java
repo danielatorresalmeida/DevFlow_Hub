@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -103,6 +104,38 @@ class LocalObjectStorageContractTest
     }
 
     @Test
+    void failingInputStreamSupportsSmallReadBuffers()
+            throws Exception {
+        FailingInputStream inputStream =
+                new FailingInputStream();
+
+        byte[] buffer = new byte[1];
+
+        assertThat(inputStream.read(buffer))
+                .isEqualTo(1);
+        assertThat(buffer)
+                .containsExactly((byte) 1);
+
+        assertThat(inputStream.read(buffer))
+                .isEqualTo(1);
+        assertThat(buffer)
+                .containsExactly((byte) 2);
+
+        assertThat(inputStream.read(buffer))
+                .isEqualTo(1);
+        assertThat(buffer)
+                .containsExactly((byte) 3);
+
+        assertThatThrownBy(
+                () -> inputStream.read(buffer)
+        )
+                .isInstanceOf(IOException.class)
+                .hasMessage(
+                        "Simulated read failure."
+                );
+    }
+
+    @Test
     void rejectsFileAsStorageRoot()
             throws Exception {
         Path rootFile =
@@ -130,13 +163,24 @@ class LocalObjectStorageContractTest
     private static final class FailingInputStream
             extends InputStream {
 
-        private boolean prefixReturned;
+        private static final byte[] PREFIX =
+                new byte[] {
+                    1,
+                    2,
+                    3
+                };
+
+        private int nextPrefixIndex;
 
         @Override
         public int read() throws IOException {
-            throw new IOException(
-                    "Simulated read failure."
-            );
+            if (nextPrefixIndex < PREFIX.length) {
+                return Byte.toUnsignedInt(
+                        PREFIX[nextPrefixIndex++]
+                );
+            }
+
+            throw simulatedFailure();
         }
 
         @Override
@@ -145,27 +189,40 @@ class LocalObjectStorageContractTest
                 int offset,
                 int length
         ) throws IOException {
-            if (!prefixReturned) {
-                byte[] prefix = new byte[] {
-                    1,
-                    2,
-                    3
-                };
+            Objects.checkFromIndexSize(
+                    offset,
+                    length,
+                    buffer.length
+            );
 
-                System.arraycopy(
-                        prefix,
-                        0,
-                        buffer,
-                        offset,
-                        prefix.length
-                );
-
-                prefixReturned = true;
-
-                return prefix.length;
+            if (length == 0) {
+                return 0;
             }
 
-            throw new IOException(
+            if (nextPrefixIndex >= PREFIX.length) {
+                throw simulatedFailure();
+            }
+
+            int bytesToCopy = Math.min(
+                    length,
+                    PREFIX.length - nextPrefixIndex
+            );
+
+            System.arraycopy(
+                    PREFIX,
+                    nextPrefixIndex,
+                    buffer,
+                    offset,
+                    bytesToCopy
+            );
+
+            nextPrefixIndex += bytesToCopy;
+
+            return bytesToCopy;
+        }
+
+        private IOException simulatedFailure() {
+            return new IOException(
                     "Simulated read failure."
             );
         }
