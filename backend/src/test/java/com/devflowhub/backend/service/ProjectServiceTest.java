@@ -1,10 +1,14 @@
 package com.devflowhub.backend.service;
 
+import com.devflowhub.backend.domain.ProjectMembershipRole;
 import com.devflowhub.backend.domain.ProjectMembershipStatus;
+import com.devflowhub.backend.entity.Collaborator;
 import com.devflowhub.backend.entity.Project;
+import com.devflowhub.backend.entity.ProjectMembership;
 import com.devflowhub.backend.exception.InvalidOperationException;
 import com.devflowhub.backend.exception.ResourceNotFoundException;
 import com.devflowhub.backend.repository.CollaboratorRepository;
+import com.devflowhub.backend.repository.ProjectMembershipRepository;
 import com.devflowhub.backend.repository.ProjectRepository;
 import com.devflowhub.backend.security.CurrentCollaboratorResolver;
 import com.devflowhub.backend.security.ProjectAccessService;
@@ -12,6 +16,7 @@ import com.devflowhub.backend.security.ProjectPermission;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -40,6 +45,9 @@ class ProjectServiceTest {
     private CollaboratorRepository collaboratorRepository;
 
     @Mock
+    private ProjectMembershipRepository projectMembershipRepository;
+
+    @Mock
     private CurrentCollaboratorResolver currentCollaboratorResolver;
 
     @Mock
@@ -52,6 +60,7 @@ class ProjectServiceTest {
         projectService = new ProjectService(
                 projectRepository,
                 collaboratorRepository,
+                projectMembershipRepository,
                 currentCollaboratorResolver,
                 projectAccessService
         );
@@ -64,6 +73,7 @@ class ProjectServiceTest {
 
         when(currentCollaboratorResolver.getRequiredId())
                 .thenReturn(7L);
+
         when(projectRepository
                 .findAccessibleByCollaboratorIdAndStatus(
                         7L,
@@ -95,6 +105,7 @@ class ProjectServiceTest {
                         11L,
                         ProjectPermission.VIEW_PROJECT
                 );
+
         order.verify(projectRepository)
                 .findById(11L);
     }
@@ -119,21 +130,30 @@ class ProjectServiceTest {
                         11L,
                         ProjectPermission.VIEW_PROJECT
                 );
+
         order.verify(projectRepository)
                 .findById(11L);
     }
 
     @Test
     void getRequiredDoesNotQueryProjectAfterAccessIsHidden() {
-        doThrow(new ResourceNotFoundException("Project not found."))
+        doThrow(
+                new ResourceNotFoundException(
+                        "Project not found."
+                )
+        )
                 .when(projectAccessService)
                 .requirePermission(
                         11L,
                         ProjectPermission.VIEW_PROJECT
                 );
 
-        assertThatThrownBy(() -> projectService.getRequired(11L))
-                .isInstanceOf(ResourceNotFoundException.class)
+        assertThatThrownBy(
+                () -> projectService.getRequired(11L)
+        )
+                .isInstanceOf(
+                        ResourceNotFoundException.class
+                )
                 .hasMessage("Project not found.");
 
         verifyNoInteractions(projectRepository);
@@ -143,6 +163,7 @@ class ProjectServiceTest {
     void countReturnsAccessibleProjectCount() {
         when(currentCollaboratorResolver.getRequiredId())
                 .thenReturn(7L);
+
         when(projectRepository
                 .countAccessibleByCollaboratorIdAndStatus(
                         7L,
@@ -150,25 +171,92 @@ class ProjectServiceTest {
                 ))
                 .thenReturn(3L);
 
-        assertThat(projectService.count()).isEqualTo(3L);
+        assertThat(projectService.count())
+                .isEqualTo(3L);
     }
 
     @Test
-    void createNormalizesStatusAndText() {
+    void createAssignsCurrentCollaboratorAsOwnerAndManager() {
         Project project = new Project();
         project.setName("  Website  ");
         project.setDescription("  New platform  ");
         project.setStatus(" in_progress ");
-        project.setManagerId(2L);
 
-        when(collaboratorRepository.existsById(2L)).thenReturn(true);
-        when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        Collaborator creator = collaborator(7L);
+
+        when(currentCollaboratorResolver.getRequired())
+                .thenReturn(creator);
+
+        when(projectRepository.saveAndFlush(
+                any(Project.class)
+        )).thenAnswer(invocation -> {
+            Project saved =
+                    invocation.getArgument(0);
+
+            saved.setId(21L);
+            return saved;
+        });
+
+        when(projectMembershipRepository.saveAndFlush(
+                any(ProjectMembership.class)
+        )).thenAnswer(
+                invocation -> invocation.getArgument(0)
+        );
 
         Project result = projectService.create(project);
 
-        assertThat(result.getName()).isEqualTo("Website");
-        assertThat(result.getDescription()).isEqualTo("New platform");
-        assertThat(result.getStatus()).isEqualTo("IN_PROGRESS");
+        assertThat(result.getId()).isEqualTo(21L);
+        assertThat(result.getName())
+                .isEqualTo("Website");
+        assertThat(result.getDescription())
+                .isEqualTo("New platform");
+        assertThat(result.getStatus())
+                .isEqualTo("IN_PROGRESS");
+        assertThat(result.getManagerId())
+                .isEqualTo(7L);
+
+        ArgumentCaptor<ProjectMembership> membershipCaptor =
+                ArgumentCaptor.forClass(
+                        ProjectMembership.class
+                );
+
+        InOrder order = inOrder(
+                currentCollaboratorResolver,
+                projectRepository,
+                projectMembershipRepository
+        );
+
+        order.verify(currentCollaboratorResolver)
+                .getRequired();
+
+        order.verify(projectRepository)
+                .saveAndFlush(project);
+
+        order.verify(projectMembershipRepository)
+                .saveAndFlush(
+                        membershipCaptor.capture()
+                );
+
+        ProjectMembership membership =
+                membershipCaptor.getValue();
+
+        assertThat(membership.getProjectId())
+                .isEqualTo(21L);
+
+        assertThat(membership.getCollaboratorId())
+                .isEqualTo(7L);
+
+        assertThat(membership.getRole())
+                .isEqualTo(
+                        ProjectMembershipRole.OWNER
+                );
+
+        assertThat(membership.getStatus())
+                .isEqualTo(
+                        ProjectMembershipStatus.ACTIVE
+                );
+
+        verifyNoInteractions(collaboratorRepository);
     }
 
     @Test
@@ -176,26 +264,61 @@ class ProjectServiceTest {
         Project project = new Project();
         project.setName("Website");
         project.setStatus("PLANNED");
-        project.setStartDate(LocalDate.of(2026, 8, 10));
-        project.setEndDate(LocalDate.of(2026, 8, 1));
+        project.setStartDate(
+                LocalDate.of(2026, 8, 10)
+        );
+        project.setEndDate(
+                LocalDate.of(2026, 8, 1)
+        );
 
-        assertThatThrownBy(() -> projectService.create(project))
-                .isInstanceOf(InvalidOperationException.class)
-                .hasMessage("Project end date cannot be before its start date.");
+        when(currentCollaboratorResolver.getRequired())
+                .thenReturn(collaborator(7L));
+
+        assertThatThrownBy(
+                () -> projectService.create(project)
+        )
+                .isInstanceOf(
+                        InvalidOperationException.class
+                )
+                .hasMessage(
+                        "Project end date cannot be " +
+                        "before its start date."
+                );
+
+        verify(projectRepository, never())
+                .saveAndFlush(any(Project.class));
+
+        verifyNoInteractions(
+                projectMembershipRepository
+        );
     }
 
     @Test
-    void createRejectsUnknownManager() {
+    void createRejectsDifferentInitialManager() {
         Project project = new Project();
         project.setName("Website");
         project.setStatus("PLANNED");
         project.setManagerId(99L);
 
-        when(collaboratorRepository.existsById(99L)).thenReturn(false);
+        when(currentCollaboratorResolver.getRequired())
+                .thenReturn(collaborator(7L));
 
-        assertThatThrownBy(() -> projectService.create(project))
-                .isInstanceOf(InvalidOperationException.class)
-                .hasMessage("The selected project manager does not exist.");
+        assertThatThrownBy(
+                () -> projectService.create(project)
+        )
+                .isInstanceOf(
+                        InvalidOperationException.class
+                )
+                .hasMessage(
+                        "The project creator must be " +
+                        "the initial project manager."
+                );
+
+        verifyNoInteractions(
+                projectRepository,
+                projectMembershipRepository,
+                collaboratorRepository
+        );
     }
 
     @Test
@@ -206,13 +329,18 @@ class ProjectServiceTest {
 
         when(projectRepository.findById(11L))
                 .thenReturn(Optional.of(existing));
+
         when(projectRepository.save(existing))
                 .thenReturn(existing);
 
-        Project result = projectService.update(11L, updated);
+        Project result =
+                projectService.update(11L, updated);
 
-        assertThat(result.getName()).isEqualTo("New name");
-        assertThat(result.getStatus()).isEqualTo("IN_PROGRESS");
+        assertThat(result.getName())
+                .isEqualTo("New name");
+
+        assertThat(result.getStatus())
+                .isEqualTo("IN_PROGRESS");
 
         InOrder order = inOrder(
                 projectAccessService,
@@ -224,28 +352,41 @@ class ProjectServiceTest {
                         11L,
                         ProjectPermission.MANAGE_PROJECT
                 );
+
         order.verify(projectRepository)
                 .findById(11L);
+
         order.verify(projectRepository)
                 .save(existing);
     }
 
     @Test
     void updateDoesNotLoadOrSaveProjectWhenPermissionIsDenied() {
-        doThrow(new ResourceNotFoundException("Project not found."))
+        doThrow(
+                new ResourceNotFoundException(
+                        "Project not found."
+                )
+        )
                 .when(projectAccessService)
                 .requirePermission(
                         11L,
                         ProjectPermission.MANAGE_PROJECT
                 );
 
-        assertThatThrownBy(() -> projectService.update(
-                11L,
-                project(null, "Updated")
-        )).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(
+                () -> projectService.update(
+                        11L,
+                        project(null, "Updated")
+                )
+        ).isInstanceOf(
+                ResourceNotFoundException.class
+        );
 
-        verify(projectRepository, never()).findById(any(Long.class));
-        verify(projectRepository, never()).save(any());
+        verify(projectRepository, never())
+                .findById(any(Long.class));
+
+        verify(projectRepository, never())
+                .save(any());
     }
 
     @Test
@@ -267,17 +408,33 @@ class ProjectServiceTest {
                         11L,
                         ProjectPermission.DELETE_PROJECT
                 );
+
         order.verify(projectRepository)
                 .findById(11L);
+
         order.verify(projectRepository)
                 .delete(project);
     }
 
-    private Project project(Long id, String name) {
+    private Project project(
+            Long id,
+            String name
+    ) {
         Project project = new Project();
+
         project.setId(id);
         project.setName(name);
         project.setStatus("PLANNED");
+
         return project;
+    }
+
+    private Collaborator collaborator(Long id) {
+        Collaborator collaborator =
+                new Collaborator();
+
+        collaborator.setId(id);
+
+        return collaborator;
     }
 }
