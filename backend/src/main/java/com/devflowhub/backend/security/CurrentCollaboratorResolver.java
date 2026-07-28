@@ -29,20 +29,7 @@ public class CurrentCollaboratorResolver {
     }
 
     public Collaborator getRequired() {
-        Authentication authentication = SecurityContextHolder
-                .getContext()
-                .getAuthentication();
-
-        if (!(authentication instanceof JwtAuthenticationToken jwtAuthentication)
-                || !authentication.isAuthenticated()) {
-            throw new AuthenticationFailedException(
-                    AUTHENTICATION_REQUIRED_MESSAGE
-            );
-        }
-
-        Long collaboratorId = parseCollaboratorId(
-                jwtAuthentication.getToken().getSubject()
-        );
+        Long collaboratorId = getRequiredId();
 
         return collaboratorRepository
                 .findById(collaboratorId)
@@ -55,7 +42,27 @@ public class CurrentCollaboratorResolver {
     }
 
     public Long getRequiredId() {
-        return getRequired().getId();
+        JwtAuthenticationToken jwtAuthentication =
+                getRequiredJwtAuthentication();
+
+        return parseCollaboratorId(
+                jwtAuthentication.getToken().getSubject()
+        );
+    }
+
+    private JwtAuthenticationToken getRequiredJwtAuthentication() {
+        Authentication authentication = SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+
+        if (!(authentication instanceof JwtAuthenticationToken jwtAuthentication)
+                || !authentication.isAuthenticated()) {
+            throw new AuthenticationFailedException(
+                    AUTHENTICATION_REQUIRED_MESSAGE
+            );
+        }
+
+        return jwtAuthentication;
     }
 
     private Long parseCollaboratorId(String subject) {
