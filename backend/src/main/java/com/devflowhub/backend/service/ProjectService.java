@@ -1,11 +1,15 @@
 package com.devflowhub.backend.service;
 
 import com.devflowhub.backend.domain.DomainValues;
+import com.devflowhub.backend.domain.ProjectMembershipRole;
 import com.devflowhub.backend.domain.ProjectMembershipStatus;
+import com.devflowhub.backend.entity.Collaborator;
 import com.devflowhub.backend.entity.Project;
+import com.devflowhub.backend.entity.ProjectMembership;
 import com.devflowhub.backend.exception.InvalidOperationException;
 import com.devflowhub.backend.exception.ResourceNotFoundException;
 import com.devflowhub.backend.repository.CollaboratorRepository;
+import com.devflowhub.backend.repository.ProjectMembershipRepository;
 import com.devflowhub.backend.repository.ProjectRepository;
 import com.devflowhub.backend.security.CurrentCollaboratorResolver;
 import com.devflowhub.backend.security.ProjectAccessService;
@@ -23,17 +27,20 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final CollaboratorRepository collaboratorRepository;
+    private final ProjectMembershipRepository projectMembershipRepository;
     private final CurrentCollaboratorResolver currentCollaboratorResolver;
     private final ProjectAccessService projectAccessService;
 
     public ProjectService(
             ProjectRepository projectRepository,
             CollaboratorRepository collaboratorRepository,
+            ProjectMembershipRepository projectMembershipRepository,
             CurrentCollaboratorResolver currentCollaboratorResolver,
             ProjectAccessService projectAccessService
     ) {
         this.projectRepository = projectRepository;
         this.collaboratorRepository = collaboratorRepository;
+        this.projectMembershipRepository = projectMembershipRepository;
         this.currentCollaboratorResolver = currentCollaboratorResolver;
         this.projectAccessService = projectAccessService;
     }
@@ -78,9 +85,48 @@ public class ProjectService {
 
     @Transactional
     public Project create(Project project) {
+        Collaborator creator =
+                currentCollaboratorResolver.getRequired();
+
+        Long creatorId = creator.getId();
+
+        if (
+            project.getManagerId() != null &&
+            !project.getManagerId().equals(creatorId)
+        ) {
+            throw new InvalidOperationException(
+                    "The project creator must be " +
+                    "the initial project manager."
+            );
+        }
+
         project.setId(null);
-        prepareAndValidate(project);
-        return projectRepository.save(project);
+        project.setManagerId(creatorId);
+
+        prepareAndValidateProjectData(project);
+
+        Project savedProject =
+                projectRepository.saveAndFlush(project);
+
+        ProjectMembership ownerMembership =
+                new ProjectMembership();
+
+        ownerMembership.setProjectId(
+                savedProject.getId()
+        );
+        ownerMembership.setCollaboratorId(creatorId);
+        ownerMembership.setRole(
+                ProjectMembershipRole.OWNER
+        );
+        ownerMembership.setStatus(
+                ProjectMembershipStatus.ACTIVE
+        );
+
+        projectMembershipRepository.saveAndFlush(
+                ownerMembership
+        );
+
+        return savedProject;
     }
 
     @Transactional
@@ -91,7 +137,9 @@ public class ProjectService {
         );
 
         Project existing = getStoredProjectRequired(id);
-        prepareAndValidate(updatedData);
+
+        prepareAndValidateProjectData(updatedData);
+        validateCollaborator(updatedData.getManagerId());
 
         existing.setName(updatedData.getName());
         existing.setDescription(updatedData.getDescription());
@@ -117,37 +165,65 @@ public class ProjectService {
 
     private Project getStoredProjectRequired(Long id) {
         return projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Project not found."
-                ));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Project not found."
+                        )
+                );
     }
 
-    private void prepareAndValidate(Project project) {
-        project.setName(TextNormalizer.trim(project.getName()));
-        project.setDescription(TextNormalizer.trimToNull(project.getDescription()));
-        project.setStatus(TextNormalizer.upperOrDefault(
-                project.getStatus(),
-                DomainValues.ProjectStatus.PLANNED
-        ));
+    private void prepareAndValidateProjectData(
+            Project project
+    ) {
+        project.setName(
+                TextNormalizer.trim(project.getName())
+        );
+
+        project.setDescription(
+                TextNormalizer.trimToNull(
+                        project.getDescription()
+                )
+        );
+
+        project.setStatus(
+                TextNormalizer.upperOrDefault(
+                        project.getStatus(),
+                        DomainValues.ProjectStatus.PLANNED
+                )
+        );
+
         DomainValues.requireAllowed(
                 project.getStatus(),
                 DomainValues.ProjectStatus.ALL,
                 "Project status"
         );
 
-        if (project.getStartDate() != null
-                && project.getEndDate() != null
-                && project.getEndDate().isBefore(project.getStartDate())) {
-            throw new InvalidOperationException("Project end date cannot be before its start date.");
+        if (
+            project.getStartDate() != null &&
+            project.getEndDate() != null &&
+            project.getEndDate().isBefore(
+                    project.getStartDate()
+            )
+        ) {
+            throw new InvalidOperationException(
+                    "Project end date cannot be " +
+                    "before its start date."
+            );
         }
-
-        validateCollaborator(project.getManagerId());
     }
 
-    private void validateCollaborator(Long collaboratorId) {
-        if (collaboratorId != null && !collaboratorRepository.existsById(collaboratorId)) {
-            throw new InvalidOperationException("The selected project manager does not exist.");
+    private void validateCollaborator(
+            Long collaboratorId
+    ) {
+        if (
+            collaboratorId != null &&
+            !collaboratorRepository.existsById(
+                    collaboratorId
+            )
+        ) {
+            throw new InvalidOperationException(
+                    "The selected project manager does not exist."
+            );
         }
     }
-
 }
