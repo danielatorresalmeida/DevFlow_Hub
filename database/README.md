@@ -97,6 +97,68 @@ esquema não corresponde às entidades Java.
 
 ## Criar uma instalação nova
 
-1. Criar uma base de dados PostgreSQL chamada:
+1. Criar uma base de dados PostgreSQL chamada `devflow_hub`.
+2. Abrir `database/devflow_hub.sql` no Query Tool do pgAdmin ou executá-lo com `psql`.
+3. Executar o script completo.
+4. Configurar `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` e `JWT_SECRET` no ambiente local.
+5. Iniciar o backend e o frontend segundo as instruções do README principal.
 
-devflow_hub
+Exemplo com `psql`:
+
+```powershell
+psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/devflow_hub.sql
+```
+
+## Dados e contas de demonstração
+
+Uma instalação nova contém:
+
+- 3 colaboradores;
+- 2 projetos;
+- 3 tarefas;
+- 2 programas internos.
+
+Todas as contas usam a palavra-passe local `password123`:
+
+| Nome | Email | Acesso inicial |
+|---|---|---|
+| Carla Mendes | `carla.mendes@example.com` | `OWNER` e gestora dos projetos de demonstração |
+| Ana Silva | `ana.silva@example.com` | `CONTRIBUTOR` em `DevFlow Hub MVP` |
+| Bruno Costa | `bruno.costa@example.com` | `CONTRIBUTOR` em `DevFlow Hub MVP` |
+
+A função profissional guardada em `collaborators.role` é informativa. A autorização de cada projeto depende da tabela `project_memberships`.
+
+Para testar `MANAGER` e `VIEWER`, inicia sessão como Carla Mendes, abre um projeto e altera ou adiciona memberships. Depois autentica-te com a conta correspondente.
+
+> Estas credenciais são exclusivamente académicas e locais. Devem ser substituídas ou removidas antes de qualquer utilização fora do ambiente de demonstração.
+
+## Verificação rápida
+
+```sql
+SELECT 'collaborators' AS table_name, COUNT(*) AS record_count FROM collaborators
+UNION ALL
+SELECT 'projects', COUNT(*) FROM projects
+UNION ALL
+SELECT 'tasks', COUNT(*) FROM tasks
+UNION ALL
+SELECT 'internal_programs', COUNT(*) FROM internal_programs
+ORDER BY table_name;
+```
+
+Numa instalação nova, o resultado esperado é:
+
+| Tabela | Registos |
+|---|---:|
+| `collaborators` | 3 |
+| `projects` | 2 |
+| `tasks` | 3 |
+| `internal_programs` | 2 |
+
+Bases utilizadas para desenvolvimento ou apresentação podem conter mais registos criados manualmente. Esses dados não são incluídos automaticamente no script de instalação.
+
+## Segurança
+
+- Não guardar a palavra-passe administrativa do PostgreSQL no repositório.
+- Não copiar uma base de desenvolvimento com dados privados para uma entrega pública.
+- Não reutilizar `password123` fora do ambiente local de demonstração.
+- Não reiniciar sequências de IDs numa base de produção. IDs eliminados podem deixar intervalos e não devem ser reutilizados para fins de apresentação.

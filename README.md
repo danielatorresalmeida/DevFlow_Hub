@@ -33,6 +33,8 @@ Spring Boot REST API
 
 O frontend React é responsável pela interface, navegação, autenticação no cliente e apresentação dos dados. O backend Spring Boot é responsável pela segurança, autorização, regras de negócio, validação, persistência, metadados documentais e respostas da API.
 
+O armazenamento de objetos está preparado no backend, mas a API HTTP atual expõe apenas os metadados dos anexos. O upload, download e eliminação do conteúdo permanecem no roadmap.
+
 A decisão arquitetural do frontend está documentada em [`docs/architecture/frontend-decision.md`](docs/architecture/frontend-decision.md).
 
 A arquitetura de controlo de acesso está documentada em:
@@ -155,7 +157,7 @@ A arquitetura de controlo de acesso está documentada em:
 - Alteração de título, descrição, estado, prioridade, projeto e responsável.
 - Tarefas independentes atribuídas ao colaborador autenticado.
 - Responsáveis de projeto limitados às memberships ativas elegíveis.
-- Apresentação do projeto, responsável, estado, prioridade, datas e tempo registado.
+- Apresentação do projeto, responsável, estado, prioridade, datas de criação e última atualização e tempo registado.
 - Início, pausa, retoma e conclusão do temporizador através da interface.
 - Atualização visual do tempo durante uma sessão ativa.
 - Estados de carregamento, erro, retry, recurso inexistente e ausência de dados.
@@ -195,6 +197,10 @@ A arquitetura, organização por camadas, execução local, documentação e aut
 - Ajuste do dashboard para distinguir métricas pessoais de métricas globais.
 - Testes Maven de integração com uma instância PostgreSQL dedicada.
 - Revisão da estratégia de armazenamento e renovação do token antes de produção.
+- Renovação segura da sessão com access token curto, refresh token, aviso de expiração e proteção contra perda de dados não guardados.
+- Datas próprias de planeamento das tarefas, com `startDate`, `dueDate`, validação cronológica e indicadores de atraso.
+- Internacionalização centralizada da interface, começando por inglês e português, sem tradução automática do conteúdo introduzido pelos utilizadores na primeira fase.
+- Ocultação do identificador interno ou apresentação de um código funcional como `PRJ-0025`, mantendo os IDs persistentes da base de dados.
 - Validação dos artefactos finais numa instalação independente.
 
 ## Estrutura principal
@@ -235,6 +241,8 @@ O DevFlow Hub utiliza PostgreSQL para persistir:
 - metadata de anexos;
 - programas internos.
 
+Os números apresentados como `PROJECT #...` e `TASK #...` são identificadores internos persistentes. Uma eliminação não renumera os registos nem reutiliza automaticamente IDs antigos, pelo que podem existir intervalos. As sequências não devem ser reiniciadas numa base de produção.
+
 Os ficheiros principais encontram-se em:
 
 ```text
@@ -252,14 +260,42 @@ database/
 - `INSTALACAO_BASE_DADOS_LOCAL.txt` explica como preparar uma base local.
 - `database/README.md` documenta instalação, migração e validação.
 
-### Dados de demonstração validados
+### Dados de demonstração de uma instalação nova
 
-- 6 colaboradores;
-- 4 projetos;
-- 5 tarefas;
-- 4 programas internos;
+O script `database/devflow_hub.sql` cria uma base local reproduzível com:
+
+- 3 colaboradores;
+- 2 projetos;
+- 3 tarefas;
+- 2 programas internos;
+- memberships derivadas dos gestores e responsáveis das tarefas;
 - foreign keys entre projetos, tarefas, programas e colaboradores;
 - constraints e índices para memberships, documentos e attachments.
+
+A base utilizada durante a apresentação pode conter mais registos criados manualmente. Esses dados locais não fazem parte automaticamente de uma instalação nova.
+
+#### Contas de teste da base preparada para a apresentação
+
+Para validar a matriz completa de permissões na base local preparada para a apresentação, estão configuradas as seguintes contas:
+
+| Papel de projeto | Nome | Email |
+|---|---|---|
+| `OWNER` | Bruno Silva | `bruno.silva@devflowhub.pt` |
+| `MANAGER` | Daniel Rocha | `daniel.rocha@devflowhub.pt` |
+| `CONTRIBUTOR` | Carla Gomes | `carla.gomes@devflowhub.pt` |
+| `VIEWER` | Ana Silva | `ana.silva@devflowhub.pt` |
+
+Todas usam a palavra-passe local de demonstração:
+
+```text
+DevFlowTest-123!
+```
+
+Estas contas permitem testar diretamente os quatro papéis sem alterar memberships durante a demonstração. A coluna profissional `Collaborator.role` continua a ser informativa; as permissões efetivas são determinadas pelas memberships ativas de cada projeto.
+
+> Estas são credenciais públicas de demonstração destinadas exclusivamente ao ambiente académico local. Devem ser alteradas ou removidas antes de qualquer utilização fora desse ambiente.
+
+A documentação destas contas não cria automaticamente os utilizadores. Para que funcionem numa instalação nova, os mesmos colaboradores, o hash da palavra-passe e as memberships correspondentes devem existir em `database/devflow_hub.sql` ou ser adicionados por uma migração de dados equivalente. Enquanto o seed não for sincronizado, os dados mínimos criados pelo script podem ser diferentes dos dados da base preparada para a apresentação.
 
 As instruções completas estão em [`database/INSTALACAO_BASE_DADOS_LOCAL.txt`](database/INSTALACAO_BASE_DADOS_LOCAL.txt).
 
@@ -330,7 +366,9 @@ $env:PORT = "8080"
 
 `JWT_SECRET` deve ser Base64 válido e conter pelo menos 32 bytes depois da descodificação.
 
-Credenciais, palavras-passe, segredos e configurações locais não devem ser guardados no Git.
+O valor predefinido de `JWT_EXPIRATION` é `PT15M`. A implementação atual não possui refresh token, pelo que a sessão termina aproximadamente 15 minutos depois do login mesmo quando existe atividade. Durante testes manuais prolongados pode ser usado outro valor local, por exemplo `PT1H`, sem alterar o código nem guardar essa configuração no Git.
+
+Credenciais reais, palavras-passe privadas, segredos e configurações locais não devem ser guardados no Git. A única exceção são as credenciais públicas de demonstração documentadas acima, criadas exclusivamente para o ambiente académico local.
 
 ### Compilar e testar
 
@@ -681,7 +719,9 @@ A sessão é eliminada quando:
 - uma chamada autenticada devolve HTTP `401`;
 - os dados armazenados são inválidos.
 
-Esta solução é adequada para a fase académica atual. Antes de uma utilização de produção, deve ser revista a estratégia de armazenamento do token, mitigação de XSS, renovação de sessão e eventual utilização de cookies `HttpOnly`, `Secure` e `SameSite`.
+Com a configuração predefinida `PT15M`, a expiração é absoluta e não é renovada pela atividade do utilizador. Esta limitação deve ser considerada durante demonstrações e testes manuais longos.
+
+Esta solução é adequada para a fase académica atual. Antes de uma utilização de produção, deve ser revista a estratégia de armazenamento do token, mitigação de XSS e renovação segura da sessão. A evolução recomendada inclui access token curto, refresh token seguro, aviso antes da expiração, logout após inatividade real e proteção contra perda de dados não guardados, considerando também cookies `HttpOnly`, `Secure` e `SameSite`.
 
 ### Autorização de projetos e tarefas
 
@@ -811,20 +851,6 @@ powershell.exe `
     -File ".\scripts\smoke-test-api.ps1" `
     -BaseUrl "http://localhost:8080"
 ```
-
-## Entrega limpa
-
-Para preparar um ZIP de código-fonte, não incluir:
-
-```text
-.git/
-backend/target/
-frontend/node_modules/
-frontend/dist/
-frontend/.env.local
-```
-
-Uma opção segura é criar a entrega a partir de um clone limpo ou utilizar `git archive` para os ficheiros versionados.
 
 ## Estratégia de branches
 

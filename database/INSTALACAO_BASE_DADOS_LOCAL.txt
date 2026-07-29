@@ -202,6 +202,56 @@ FROM attachments
 
 ORDER BY table_name;
 
+Numa instalação nova criada com database/devflow_hub.sql, os valores
+esperados são:
+
+- collaborators: 3
+- projects: 2
+- tasks: 3
+- internal_programs: 2
+- documents: 0
+- attachments: 0
+
+Os dados criados manualmente durante desenvolvimento ou apresentação não
+fazem parte automaticamente de uma instalação nova.
+
+
+============================================================
+7.0.1. CONTAS LOCAIS DE DEMONSTRAÇÃO
+============================================================
+
+Todas as contas abaixo usam a password local:
+
+password123
+
+Contas:
+
+- Carla Mendes
+  Email: carla.mendes@example.com
+  Acesso inicial: OWNER e gestora dos projetos de demonstração.
+
+- Ana Silva
+  Email: ana.silva@example.com
+  Acesso inicial: CONTRIBUTOR no projeto DevFlow Hub MVP.
+
+- Bruno Costa
+  Email: bruno.costa@example.com
+  Acesso inicial: CONTRIBUTOR no projeto DevFlow Hub MVP.
+
+A função profissional guardada na coluna collaborators.role é informativa.
+As permissões de projeto são determinadas por project_memberships.
+
+Para testar MANAGER e VIEWER:
+
+1. Iniciar sessão como Carla Mendes.
+2. Abrir um projeto.
+3. Adicionar ou alterar a membership de Ana Silva ou Bruno Costa.
+4. Terminar sessão.
+5. Autenticar com a conta cujo papel foi configurado.
+
+Estas credenciais destinam-se exclusivamente ao ambiente académico local.
+Não devem ser reutilizadas numa instalação real.
+
 
 Para verificar as chaves estrangeiras:
 

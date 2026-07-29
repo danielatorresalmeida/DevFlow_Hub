@@ -2777,3 +2777,90 @@ O card `Programs` mantém a contagem real devolvida pelo backend e passou a apre
 ### Próxima etapa
 
 Atualizar a documentação, publicar a branch, executar os checks automáticos, integrar em `develop` e criar o tag final da versão apresentada.
+
+
+---
+
+## Marco 32 - 29/07/2026 - Documentação de demonstração e observações finais
+
+### Estado
+
+Atualização documental preparada depois da integração do PR #47 e da população da base local utilizada na apresentação.
+
+### Objetivo
+
+Permitir que outra pessoa instale o projeto numa máquina nova, autentique-se com contas locais conhecidas e teste as regras de acesso sem depender da base de dados utilizada durante o desenvolvimento.
+
+### Contas e dados de demonstração
+
+A documentação passou a distinguir explicitamente:
+
+- os dados criados por `database/devflow_hub.sql` numa instalação nova;
+- os dados adicionais criados manualmente na base local da apresentação.
+
+Foram documentadas as quatro contas configuradas na base local preparada para a apresentação, todas com a palavra-passe de demonstração `DevFlowTest-123!`:
+
+| Papel de projeto | Nome | Email |
+|---|---|---|
+| `OWNER` | Bruno Silva | `bruno.silva@devflowhub.pt` |
+| `MANAGER` | Daniel Rocha | `daniel.rocha@devflowhub.pt` |
+| `CONTRIBUTOR` | Carla Gomes | `carla.gomes@devflowhub.pt` |
+| `VIEWER` | Ana Silva | `ana.silva@devflowhub.pt` |
+
+Estas contas permitem testar diretamente a matriz completa de permissões sem alterar memberships durante a demonstração. O campo profissional `Collaborator.role` permanece informativo; o acesso efetivo é determinado pelas memberships ativas de cada projeto.
+
+As credenciais são públicas e destinam-se exclusivamente ao ambiente académico local. Devem ser alteradas ou removidas antes de qualquer utilização fora desse ambiente.
+
+A documentação destas contas não as cria automaticamente numa instalação nova. Para que fiquem disponíveis após a execução de `database/devflow_hub.sql`, os quatro colaboradores, o hash da palavra-passe e as memberships correspondentes terão de ser sincronizados no seed ou adicionados por uma migração de dados equivalente.
+
+### Validação da base utilizada na apresentação
+
+A base local preparada para a demonstração apresentava:
+
+```text
+Collaborators: 6
+Projects: 4
+Tasks: 13
+Programs: 4
+Tracked time: 2h 14m
+Pending: 5
+In Progress: 3
+Review: 3
+Completed: 2
+```
+
+Estes valores são dados locais de apresentação e não constituem o resultado esperado do script de instalação. Enquanto o seed não for sincronizado com as quatro contas acima, uma instalação nova continua a incluir 3 colaboradores, 2 projetos, 3 tarefas e 2 programas internos.
+
+### Observações finais registadas
+
+- os IDs apresentados em projetos e tarefas são identificadores persistentes da base de dados, podem conter intervalos após eliminações e não devem ser reiniciados em produção;
+- a sessão JWT utiliza por defeito `PT15M` e expira de forma absoluta, mesmo com atividade;
+- uma futura estratégia de autenticação deve incluir refresh token seguro, aviso de expiração, renovação controlada e proteção contra perda de dados não guardados;
+- as tarefas ainda não possuem `startDate` e `dueDate` próprios; `createdAt` e `updatedAt` são apenas campos de auditoria, pelo que a documentação passou a distingui-los explicitamente de datas de planeamento;
+- o object storage está preparado no backend, mas a API HTTP atual expõe apenas metadata de anexos; upload, download e eliminação de conteúdo permanecem no roadmap;
+- a internacionalização da interface, começando por inglês e português, permanece no roadmap;
+- a interface dedicada aos programas internos permanece planeada;
+- a possível inconsistência do botão inicial do temporizador não foi confirmada: tarefas nunca iniciadas apresentam corretamente `Start timer`, enquanto `Resume timer` surge apenas depois de uma pausa;
+- os dados da demonstração foram uniformizados em inglês e os temporizadores foram pausados antes do ensaio final;
+- as credenciais reais, passwords privadas, segredos e configurações locais permanecem excluídos do Git; apenas as credenciais públicas de demonstração são documentadas como exceção académica controlada.
+
+### Ficheiros atualizados
+
+- `README.md`;
+- `database/README.md`;
+- `database/INSTALACAO_BASE_DADOS_LOCAL.txt`;
+- `LOG.md`.
+
+### Validação
+
+Alteração exclusivamente documental, validada com:
+
+```text
+git diff --check
+```
+
+Não foram alterados o backend, o frontend, o esquema SQL nem os dados seed. Por esse motivo, as quatro contas documentadas correspondem à base local preparada para a apresentação e só ficarão disponíveis numa instalação nova depois da sincronização do seed ou de uma migração equivalente.
+
+### Próxima etapa
+
+Rever o diff, integrar a atualização documental em `develop` e utilizar estas observações como base para o relatório final.
