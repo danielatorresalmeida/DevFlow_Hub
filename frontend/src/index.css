@@ -1364,7 +1364,7 @@ h1 {
 
 .task-action-button:disabled {
   opacity: 0.6;
-  cursor: wait;
+  cursor: not-allowed;
 }
 
 .task-completed-message,
