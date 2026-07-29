@@ -2285,4 +2285,96 @@ BUILD SUCCESS
 
 ### Próxima etapa
 
-Abrir um pull request pequeno apenas com os testes e esta atualização documental. Depois do merge, avançar para a operação explícita e transacional de transferência de ownership.
+O follow-up foi integrado em `develop`. A etapa seguinte avançou para a operação explícita e transacional de transferência de ownership.
+
+---
+
+## Marco 27 - 29/07/2026 - Transferência explícita e transacional de ownership
+
+### Estado
+
+Implementação concluída na branch `feature/project-ownership-transfer` e registada no commit:
+
+```text
+731e311 feat: add project ownership transfer
+```
+
+### Objetivo
+
+Criar uma operação explícita, autorizada e transacional para transferir a propriedade de um projeto sem permitir que os endpoints genéricos de memberships criem, alterem ou removam o papel `OWNER`.
+
+### Contrato da API
+
+Foi adicionado o endpoint:
+
+```text
+POST /api/projects/{projectId}/ownership-transfer
+```
+
+O pedido inclui:
+
+- `newOwnerCollaboratorId`;
+- `currentOwnerMembershipVersion`;
+- `newOwnerMembershipVersion`.
+
+As versões das duas memberships permitem detetar pedidos baseados em estado desatualizado antes de aplicar alterações.
+
+### Regras de autorização e domínio
+
+- apenas o `OWNER` atual pode iniciar a transferência;
+- não é permitido transferir ownership para o próprio utilizador;
+- o destinatário deve ser um colaborador ativo;
+- o destinatário deve possuir membership `ACTIVE` no projeto;
+- deve existir exatamente um `OWNER` ativo antes da operação;
+- o novo proprietário passa a `OWNER`;
+- o proprietário anterior passa a `MANAGER`;
+- `project.managerId` passa para o novo proprietário;
+- `MANAGER`, `CONTRIBUTOR` e `VIEWER` recebem `403`;
+- projetos inexistentes ou ocultos devolvem `404`;
+- versões desatualizadas e conflitos de optimistic locking devolvem `409 Conflict`.
+
+### Atomicidade e concorrência
+
+A atualização das duas memberships e de `project.managerId` ocorre numa única transação. As validações são concluídas antes das mutações, e qualquer falha provoca rollback completo.
+
+Não foi necessária uma migration de base de dados, porque a operação reutiliza as colunas e os campos de versão já existentes.
+
+### Testes adicionados
+
+Foram adicionados 21 testes:
+
+- 12 testes de serviço;
+- 5 testes de controller;
+- 4 testes HTTP de integração;
+- atualização da cobertura da matriz de permissões.
+
+### Validação direcionada
+
+```text
+Tests run: 26
+Failures: 0
+Errors: 0
+Skipped: 0
+BUILD SUCCESS
+```
+
+### Validação completa
+
+```text
+Tests run: 236
+Failures: 0
+Errors: 0
+Skipped: 0
+BUILD SUCCESS
+```
+
+### Impacto
+
+- a transferência de ownership deixou de ser trabalho pendente;
+- a matriz de permissões passou a incluir uma permissão exclusiva de transferência;
+- o total da suite backend passou de 215 para 236 testes;
+- a consistência entre `OWNER`, memberships e `project.managerId` ficou protegida por transação e optimistic locking.
+
+### Próxima etapa
+
+Abrir o pull request, solicitar review técnica ao Rúben e validar cuidadosamente autorização, concorrência, atomicidade e consistência de dados antes do merge.
