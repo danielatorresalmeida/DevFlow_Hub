@@ -1,0 +1,457 @@
+DEVFLOW HUB
+GUIA DE INSTALAÇÃO LOCAL DA BASE DE DADOS
+
+============================================================
+1. OBJETIVO
+============================================================
+
+Este documento explica como criar e preparar localmente a base de
+dados PostgreSQL utilizada pelo projeto DevFlow Hub.
+
+Base de dados utilizada:
+
+devflow_hub
+
+O projeto não guarda a password real do PostgreSQL no repositório.
+Cada utilizador deve configurar localmente as suas credenciais.
+
+
+============================================================
+2. REQUISITOS
+============================================================
+
+Antes de começar, confirmar que estão instalados:
+
+- PostgreSQL 18, ou uma versão compatível;
+- pgAdmin 4, recomendado para utilização visual;
+- Java JDK 21;
+- Maven Wrapper, já incluído no projeto.
+
+O serviço PostgreSQL deve estar em execução.
+
+
+============================================================
+3. FICHEIROS DA BASE DE DADOS
+============================================================
+
+Os ficheiros necessários encontram-se na pasta:
+
+database/
+
+Ficheiros principais:
+
+- devflow_hub.sql
+  Cria uma instalação nova da base de dados.
+
+- migrate_existing_database.sql
+  Atualiza uma base de dados criada por versões anteriores.
+
+- README.md
+  Contém informação adicional sobre o esquema e as migrações.
+
+- migrations/20260724_restore_core_foreign_keys.sql
+  Restaura e valida as chaves estrangeiras principais de uma base
+  criada por uma versão anterior.
+
+- migrations/20260724_add_documents_foundation.sql
+  Cria e valida as tabelas documents e attachments, bem como as
+  respetivas relações, restrições e índices.
+
+
+============================================================
+4. CRIAR A BASE DE DADOS COM O PGADMIN 4
+============================================================
+
+1. Abrir o pgAdmin 4.
+
+2. Ligar ao servidor PostgreSQL local.
+
+3. Na árvore lateral, clicar com o botão direito em:
+
+   Databases
+
+4. Selecionar:
+
+   Create > Database
+
+5. Introduzir o nome:
+
+   devflow_hub
+
+6. Manter o proprietário como o utilizador PostgreSQL local,
+   normalmente:
+
+   postgres
+
+7. Guardar a nova base de dados.
+
+8. Selecionar a base:
+
+   devflow_hub
+
+9. Abrir:
+
+   Tools > Query Tool
+
+10. Abrir o ficheiro:
+
+    database/devflow_hub.sql
+
+11. Executar o ficheiro completo.
+
+12. Atualizar a pasta Tables dentro do schema public.
+
+
+============================================================
+5. TABELAS ESPERADAS
+============================================================
+
+Depois de executar o script, devem existir as seguintes tabelas:
+
+- collaborators
+- projects
+- tasks
+- internal_programs
+- documents
+- attachments
+
+
+============================================================
+6. RELAÇÕES ESPERADAS
+============================================================
+
+O esquema inclui as seguintes chaves estrangeiras:
+
+- projects.manager_id
+  referencia collaborators.id
+
+- tasks.project_id
+  referencia projects.id
+
+- tasks.assignee_id
+  referencia collaborators.id
+
+- internal_programs.manager_id
+  referencia collaborators.id
+
+- documents.project_id
+  referencia projects.id
+
+- documents.task_id
+  referencia tasks.id
+
+- attachments.document_id
+  referencia documents.id
+
+
+============================================================
+7. VALIDAR A INSTALAÇÃO
+============================================================
+
+Executar no Query Tool:
+
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY table_name;
+
+O resultado deve apresentar as seis tabelas principais.
+
+
+Para verificar o número de registos de demonstração:
+
+SELECT
+    'collaborators' AS table_name,
+    COUNT(*) AS record_count
+FROM collaborators
+
+UNION ALL
+
+SELECT
+    'projects',
+    COUNT(*)
+FROM projects
+
+UNION ALL
+
+SELECT
+    'tasks',
+    COUNT(*)
+FROM tasks
+
+UNION ALL
+
+SELECT
+    'internal_programs',
+    COUNT(*)
+FROM internal_programs
+
+UNION ALL
+
+SELECT
+    'documents',
+    COUNT(*)
+FROM documents
+
+UNION ALL
+
+SELECT
+    'attachments',
+    COUNT(*)
+FROM attachments
+
+ORDER BY table_name;
+
+Numa instalação nova criada com database/devflow_hub.sql, os valores
+esperados são:
+
+- collaborators: 3
+- projects: 2
+- tasks: 3
+- internal_programs: 2
+- documents: 0
+- attachments: 0
+
+Os dados criados manualmente durante desenvolvimento ou apresentação não
+fazem parte automaticamente de uma instalação nova.
+
+
+============================================================
+7.0.1. CONTAS LOCAIS DE DEMONSTRAÇÃO
+============================================================
+
+Todas as contas abaixo usam a password local:
+
+password123
+
+Contas:
+
+- Carla Mendes
+  Email: carla.mendes@example.com
+  Acesso inicial: OWNER e gestora dos projetos de demonstração.
+
+- Ana Silva
+  Email: ana.silva@example.com
+  Acesso inicial: CONTRIBUTOR no projeto DevFlow Hub MVP.
+
+- Bruno Costa
+  Email: bruno.costa@example.com
+  Acesso inicial: CONTRIBUTOR no projeto DevFlow Hub MVP.
+
+A função profissional guardada na coluna collaborators.role é informativa.
+As permissões de projeto são determinadas por project_memberships.
+
+Para testar MANAGER e VIEWER:
+
+1. Iniciar sessão como Carla Mendes.
+2. Abrir um projeto.
+3. Adicionar ou alterar a membership de Ana Silva ou Bruno Costa.
+4. Terminar sessão.
+5. Autenticar com a conta cujo papel foi configurado.
+
+Estas credenciais destinam-se exclusivamente ao ambiente académico local.
+Não devem ser reutilizadas numa instalação real.
+
+
+Para verificar as chaves estrangeiras:
+
+SELECT
+    tc.table_name,
+    kcu.column_name,
+    ccu.table_name AS referenced_table,
+    ccu.column_name AS referenced_column,
+    tc.constraint_name
+FROM information_schema.table_constraints AS tc
+JOIN information_schema.key_column_usage AS kcu
+    ON tc.constraint_name = kcu.constraint_name
+    AND tc.constraint_schema = kcu.constraint_schema
+JOIN information_schema.constraint_column_usage AS ccu
+    ON ccu.constraint_name = tc.constraint_name
+    AND ccu.constraint_schema = tc.constraint_schema
+WHERE tc.constraint_type = 'FOREIGN KEY'
+  AND tc.table_schema = 'public'
+ORDER BY tc.table_name, kcu.column_name;
+
+
+============================================================
+7.1. ATUALIZAR UMA BASE DE DADOS EXISTENTE
+============================================================
+
+Esta secção aplica-se a uma base criada por uma versão anterior do
+projeto. Não é necessária numa instalação nova criada através de:
+
+database/devflow_hub.sql
+
+
+Antes de aplicar migrações:
+
+1. Confirmar que está selecionada a base devflow_hub.
+
+2. Criar uma cópia de segurança.
+
+3. Confirmar que não existem alterações SQL não revistas.
+
+
+Executar os scripts pela seguinte ordem:
+
+1. database/migrations/20260724_restore_core_foreign_keys.sql
+
+2. database/migrations/20260724_add_documents_foundation.sql
+
+
+No pgAdmin 4, abrir cada script no Query Tool e executá-lo por
+completo, confirmando que terminou sem erros.
+
+
+A partir da raiz do projeto, também podem ser usados estes comandos:
+
+psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260724_restore_core_foreign_keys.sql
+
+psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260724_add_documents_foundation.sql
+
+
+Os dois scripts são idempotentes e podem ser executados novamente.
+
+Depois das migrações, iniciar o backend. A configuração
+spring.jpa.hibernate.ddl-auto=validate faz o arranque falhar quando
+o esquema PostgreSQL não corresponde às entidades Java.
+
+============================================================
+8. CONFIGURAR O BACKEND
+============================================================
+
+O backend recebe a configuração através de variáveis de ambiente.
+
+Não adicionar a password real ao ficheiro application.properties.
+
+
+No PowerShell:
+
+$env:DB_URL="jdbc:postgresql://localhost:5432/devflow_hub"
+$env:DB_USERNAME="postgres"
+$env:DB_PASSWORD="A_PASSWORD_LOCAL_DO_POSTGRESQL"
+
+
+No CMD:
+
+set "DB_URL=jdbc:postgresql://localhost:5432/devflow_hub"
+set "DB_USERNAME=postgres"
+set "DB_PASSWORD=A_PASSWORD_LOCAL_DO_POSTGRESQL"
+
+
+Substituir:
+
+A_PASSWORD_LOCAL_DO_POSTGRESQL
+
+pela password configurada no PostgreSQL local.
+
+
+============================================================
+9. EXECUTAR O BACKEND
+============================================================
+
+A partir da pasta backend:
+
+PowerShell ou CMD:
+
+.\mvnw.cmd spring-boot:run
+
+
+Também é possível criar e executar o JAR:
+
+.\mvnw.cmd clean verify
+
+java -jar target\devflow-hub.jar
+
+
+A aplicação deverá ficar disponível em:
+
+http://localhost:8080
+
+
+============================================================
+10. ERROS FREQUENTES
+============================================================
+
+Erro:
+database "devflow_hub" does not exist
+
+Solução:
+Criar a base de dados devflow_hub no pgAdmin e executar
+database/devflow_hub.sql.
+
+
+Erro:
+password authentication failed for user "postgres"
+
+Solução:
+Confirmar DB_USERNAME e DB_PASSWORD.
+
+
+Erro:
+Connection to localhost:5432 refused
+
+Solução:
+Confirmar que o serviço PostgreSQL está em execução.
+
+
+Erro:
+Schema-validation: missing table
+
+Solução:
+Confirmar que o script foi executado na base devflow_hub e não
+noutra base de dados.
+
+
+============================================================
+11. RECRIAR UMA INSTALAÇÃO LIMPA
+============================================================
+
+Para testar uma instalação nova:
+
+1. Criar uma base de dados temporária, por exemplo:
+
+   devflow_hub_validation
+
+2. Executar nela:
+
+   database/devflow_hub.sql
+
+3. Confirmar as tabelas, os registos e as chaves estrangeiras.
+
+Não eliminar uma base de dados com informação importante sem criar
+primeiro uma cópia de segurança.
+
+
+============================================================
+12. SEGURANÇA
+============================================================
+
+Nunca adicionar ao Git:
+
+- passwords reais;
+- application-local.properties;
+- ficheiros .env com credenciais;
+- cópias da base de dados com informação privada.
+
+A password apresentada nos dados de demonstração pertence apenas ao
+ambiente académico da aplicação e não corresponde à password
+administrativa do PostgreSQL.
+
+============================================================
+NOTA SOBRE UTF-8 NO WINDOWS POWERSHELL 5.1
+============================================================
+
+A base de dados pode estar corretamente configurada em UTF-8 e, ainda assim,
+o psql apresentar textos como GestÃ£o no Windows PowerShell 5.1.
+
+Isto é um problema de apresentação do terminal, não uma prova de corrupção.
+Antes de alterar dados, confirme:
+
+- SHOW server_encoding; deve devolver UTF8.
+- SHOW client_encoding; deve devolver UTF8.
+- A resposta JSON gravada com curl.exe deve ser lida explicitamente como UTF-8.
+- Uma inspeção hexadecimal com encode(convert_to(campo, 'UTF8'), 'hex')
+  permite confirmar os bytes reais armazenados.
+
+Não execute UPDATE para corrigir acentos apenas com base na apresentação do psql.
