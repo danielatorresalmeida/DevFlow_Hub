@@ -2,11 +2,15 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { ApiClientError } from '../api/apiClient'
 import { getCollaborators } from '../api/collaboratorsApi'
+import { getProjectMembers } from '../api/projectMembershipsApi'
 import { getProjectById } from '../api/projectsApi'
 import { getTasks } from '../api/tasksApi'
 import { useAuth } from '../auth/useAuth'
 import { AppHeader } from '../components/AppHeader'
+import { ProjectMembersPanel } from '../components/ProjectMembersPanel'
+import type { Collaborator } from '../types/collaborator'
 import type { Project } from '../types/project'
+import type { ProjectMember } from '../types/projectMembership'
 import type { Task } from '../types/task'
 
 interface ProjectTaskItem extends Task {
@@ -115,6 +119,12 @@ export function ProjectDetailPage() {
   const [projectTasks, setProjectTasks] =
     useState<ProjectTaskItem[]>([])
 
+  const [collaborators, setCollaborators] =
+    useState<Collaborator[]>([])
+
+  const [projectMembers, setProjectMembers] =
+    useState<ProjectMember[]>([])
+
   const [isLoading, setIsLoading] = useState(true)
   const [isNotFound, setIsNotFound] = useState(false)
   const [errorMessage, setErrorMessage] =
@@ -144,6 +154,7 @@ export function ProjectDetailPage() {
           projectResponse,
           collaboratorResponse,
           taskResponse,
+          memberResponse,
         ] = await Promise.all([
           getProjectById(
             projectId,
@@ -155,6 +166,11 @@ export function ProjectDetailPage() {
             controller.signal,
           ),
           getTasks(
+            currentSession,
+            controller.signal,
+          ),
+          getProjectMembers(
+            projectId,
             currentSession,
             controller.signal,
           ),
@@ -193,6 +209,8 @@ export function ProjectDetailPage() {
         setProject(projectResponse)
         setManagerName(resolvedManagerName)
         setProjectTasks(associatedTasks)
+        setCollaborators(collaboratorResponse)
+        setProjectMembers(memberResponse)
       } catch (error) {
         if (controller.signal.aborted) {
           return
@@ -211,6 +229,8 @@ export function ProjectDetailPage() {
         ) {
           setProject(null)
           setProjectTasks([])
+          setCollaborators([])
+          setProjectMembers([])
           setIsNotFound(true)
           return
         }
@@ -252,7 +272,7 @@ export function ProjectDetailPage() {
       <section className="card card--wide">
         <AppHeader
           title={project?.name ?? 'Project detail'}
-          description="Review project information and its associated tasks."
+          description="Review project information, members and associated tasks."
         />
 
         <div
@@ -270,7 +290,7 @@ export function ProjectDetailPage() {
             <section className="dashboard-state">
               <h2>Loading project</h2>
               <p>
-                Retrieving the project, manager and tasks.
+                Retrieving the project, members, manager and tasks.
               </p>
             </section>
           )}
@@ -366,6 +386,15 @@ export function ProjectDetailPage() {
                     </div>
                   </dl>
                 </section>
+
+                <ProjectMembersPanel
+                  projectId={project.id}
+                  projectManagerId={project.managerId}
+                  session={session}
+                  collaborators={collaborators}
+                  members={projectMembers}
+                  onMembersChange={setProjectMembers}
+                />
 
                 <section className="project-detail-tasks">
                   <div className="project-detail-section-heading">

@@ -17,7 +17,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -1405,5 +1406,245 @@ h1 {
 
   .task-action-button {
     width: 100%;
+  }
+}
+
+/* Project membership management */
+
+.project-members-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.project-member-count {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 6px 10px;
+  color: #475467;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  background: #f2f4f7;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.project-member-form,
+.project-members-readonly {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  background: #f8f9fb;
+  border: 1px solid #e2e7ee;
+  border-radius: 9px;
+}
+
+.project-member-form-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.project-member-form-heading h3,
+.project-member-form-heading p,
+.project-members-readonly p {
+  margin: 0;
+}
+
+.project-member-form-heading p,
+.project-members-readonly p {
+  margin-top: 6px;
+  color: #687484;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.project-member-form-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.5fr)
+    minmax(180px, 0.8fr)
+    auto;
+  align-items: end;
+  gap: 14px;
+}
+
+.project-member-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.project-member-field > span {
+  color: #344054;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.project-member-field select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 36px 9px 12px;
+  color: #172033;
+  background: #ffffff;
+  border: 1px solid #cfd6df;
+  border-radius: 7px;
+}
+
+.project-member-field select:focus {
+  border-color: #274f87;
+  outline: 3px solid rgb(39 79 135 / 14%);
+}
+
+.project-member-field select:disabled {
+  color: #687484;
+  cursor: not-allowed;
+  background: #f2f4f7;
+}
+
+.project-member-message {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  border: 1px solid;
+  border-radius: 7px;
+}
+
+.project-member-message--success {
+  color: #027a48;
+  background: #ecfdf3;
+  border-color: #abefc6;
+}
+
+.project-member-message--error {
+  color: #b42318;
+  background: #fff1f0;
+  border-color: #fecdca;
+}
+
+.project-member-list {
+  display: grid;
+  grid-template-columns: repeat(
+    2,
+    minmax(0, 1fr)
+  );
+  gap: 18px;
+}
+
+.project-member-item {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e7ee;
+  border-radius: 9px;
+}
+
+.project-member-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.project-member-header h3,
+.project-member-header p {
+  margin: 0;
+}
+
+.project-member-header h3 {
+  overflow-wrap: anywhere;
+}
+
+.project-member-header p {
+  margin-top: 5px;
+  color: #687484;
+  font-size: 0.8125rem;
+}
+
+.membership-role-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 5px 9px;
+  color: #344054;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #f2f4f7;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.membership-role-badge--owner {
+  color: #6941c6;
+  background: #f4f3ff;
+}
+
+.membership-role-badge--manager {
+  color: #175cd3;
+  background: #eff8ff;
+}
+
+.membership-role-badge--contributor {
+  color: #067647;
+  background: #ecfdf3;
+}
+
+.project-member-actions {
+  display: grid;
+  gap: 14px;
+  padding-top: 16px;
+  border-top: 1px solid #edf0f4;
+}
+
+.project-member-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.project-member-note {
+  margin: 0;
+  padding-top: 14px;
+  color: #687484;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  border-top: 1px solid #edf0f4;
+}
+
+@media (max-width: 900px) {
+  .project-member-form-grid,
+  .project-member-list {
+    grid-template-columns: 1fr;
+  }
+
+  .project-member-form-grid .task-action-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 680px) {
+  .project-member-form-heading,
+  .project-member-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .project-member-action-buttons {
+    flex-direction: column;
+  }
+
+  .project-member-action-buttons .task-action-button {
+    width: 100%;
+  }
+
+  .project-member-form,
+  .project-member-item,
+  .project-members-readonly {
+    padding: 18px;
   }
 }
