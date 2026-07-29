@@ -26,6 +26,13 @@ public enum ProjectPermission {
             )
     ),
 
+    MANAGE_PROJECT_MEMBERS(
+            EnumSet.of(
+                    ProjectMembershipRole.OWNER,
+                    ProjectMembershipRole.MANAGER
+            )
+    ),
+
     DELETE_PROJECT(
             EnumSet.of(ProjectMembershipRole.OWNER)
     );

@@ -17,6 +17,7 @@ class ProjectPermissionTest {
                         ProjectPermission.VIEW_PROJECT,
                         ProjectPermission.CONTRIBUTE_TO_PROJECT,
                         ProjectPermission.MANAGE_PROJECT,
+                        ProjectPermission.MANAGE_PROJECT_MEMBERS,
                         ProjectPermission.DELETE_PROJECT
                 );
     }
@@ -27,7 +28,8 @@ class ProjectPermissionTest {
                 .containsExactly(
                         ProjectPermission.VIEW_PROJECT,
                         ProjectPermission.CONTRIBUTE_TO_PROJECT,
-                        ProjectPermission.MANAGE_PROJECT
+                        ProjectPermission.MANAGE_PROJECT,
+                        ProjectPermission.MANAGE_PROJECT_MEMBERS
                 );
     }
 

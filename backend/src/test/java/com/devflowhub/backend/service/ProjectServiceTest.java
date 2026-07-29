@@ -390,6 +390,138 @@ class ProjectServiceTest {
     }
 
     @Test
+    void updateAcceptsActiveManagerMembershipAsProjectManager() {
+        Project existing = project(11L, "Old name");
+        existing.setManagerId(7L);
+
+        Project updated = project(null, "New name");
+        updated.setManagerId(8L);
+
+        Collaborator manager = collaborator(8L);
+        manager.setActive(true);
+
+        ProjectMembership membership = new ProjectMembership();
+        membership.setProjectId(11L);
+        membership.setCollaboratorId(8L);
+        membership.setRole(ProjectMembershipRole.MANAGER);
+        membership.setStatus(ProjectMembershipStatus.ACTIVE);
+
+        when(projectRepository.findById(11L))
+                .thenReturn(Optional.of(existing));
+        when(collaboratorRepository.findById(8L))
+                .thenReturn(Optional.of(manager));
+        when(projectMembershipRepository
+                .findByProjectIdAndCollaboratorIdAndStatus(
+                        11L,
+                        8L,
+                        ProjectMembershipStatus.ACTIVE
+                ))
+                .thenReturn(Optional.of(membership));
+        when(projectRepository.save(existing))
+                .thenReturn(existing);
+
+        Project result = projectService.update(11L, updated);
+
+        assertThat(result.getManagerId()).isEqualTo(8L);
+    }
+
+    @Test
+    void updateRejectsInactiveProjectManager() {
+        Project existing = project(11L, "Old name");
+        Project updated = project(null, "New name");
+        updated.setManagerId(8L);
+
+        Collaborator inactive = collaborator(8L);
+        inactive.setActive(false);
+
+        when(projectRepository.findById(11L))
+                .thenReturn(Optional.of(existing));
+        when(collaboratorRepository.findById(8L))
+                .thenReturn(Optional.of(inactive));
+
+        assertThatThrownBy(() ->
+                projectService.update(11L, updated)
+        )
+                .isInstanceOf(InvalidOperationException.class)
+                .hasMessage(
+                        "The selected project manager must be active."
+                );
+
+        verifyNoInteractions(projectMembershipRepository);
+        verify(projectRepository, never()).save(any());
+    }
+
+    @Test
+    void updateRejectsManagerWhoIsNotActiveProjectMember() {
+        Project existing = project(11L, "Old name");
+        Project updated = project(null, "New name");
+        updated.setManagerId(8L);
+
+        Collaborator manager = collaborator(8L);
+        manager.setActive(true);
+
+        when(projectRepository.findById(11L))
+                .thenReturn(Optional.of(existing));
+        when(collaboratorRepository.findById(8L))
+                .thenReturn(Optional.of(manager));
+        when(projectMembershipRepository
+                .findByProjectIdAndCollaboratorIdAndStatus(
+                        11L,
+                        8L,
+                        ProjectMembershipStatus.ACTIVE
+                ))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                projectService.update(11L, updated)
+        )
+                .isInstanceOf(InvalidOperationException.class)
+                .hasMessage(
+                        "The selected project manager must be an active member of this project."
+                );
+
+        verify(projectRepository, never()).save(any());
+    }
+
+    @Test
+    void updateRejectsContributorAsProjectManager() {
+        Project existing = project(11L, "Old name");
+        Project updated = project(null, "New name");
+        updated.setManagerId(8L);
+
+        Collaborator collaborator = collaborator(8L);
+        collaborator.setActive(true);
+
+        ProjectMembership membership = new ProjectMembership();
+        membership.setProjectId(11L);
+        membership.setCollaboratorId(8L);
+        membership.setRole(ProjectMembershipRole.CONTRIBUTOR);
+        membership.setStatus(ProjectMembershipStatus.ACTIVE);
+
+        when(projectRepository.findById(11L))
+                .thenReturn(Optional.of(existing));
+        when(collaboratorRepository.findById(8L))
+                .thenReturn(Optional.of(collaborator));
+        when(projectMembershipRepository
+                .findByProjectIdAndCollaboratorIdAndStatus(
+                        11L,
+                        8L,
+                        ProjectMembershipStatus.ACTIVE
+                ))
+                .thenReturn(Optional.of(membership));
+
+        assertThatThrownBy(() ->
+                projectService.update(11L, updated)
+        )
+                .isInstanceOf(InvalidOperationException.class)
+                .hasMessage(
+                        "The selected project manager must have the OWNER or MANAGER project role."
+                );
+
+        verify(projectRepository, never()).save(any());
+    }
+
+    @Test
     void deleteRequiresOwnerPermissionBeforeLoadingAndDeleting() {
         Project project = project(11L, "Website");
 
