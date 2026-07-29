@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import {
+  Link,
+  useNavigate,
+  useParams,
+} from 'react-router'
 import { ApiClientError } from '../api/apiClient'
 import { getCollaborators } from '../api/collaboratorsApi'
 import { getProjectMembers } from '../api/projectMembershipsApi'
-import { getProjectById } from '../api/projectsApi'
+import {
+  deleteProject,
+  getProjectById,
+} from '../api/projectsApi'
 import { getTasks } from '../api/tasksApi'
 import { useAuth } from '../auth/useAuth'
 import { AppHeader } from '../components/AppHeader'
+import { ProjectForm } from '../components/ProjectForm'
+import type { ProjectManagerOption } from '../components/ProjectForm'
 import { ProjectMembersPanel } from '../components/ProjectMembersPanel'
 import { ProjectOwnershipTransferPanel } from '../components/ProjectOwnershipTransferPanel'
 import type { Collaborator } from '../types/collaborator'
@@ -108,6 +117,7 @@ function formatDuration(totalSeconds: number): string {
 
 export function ProjectDetailPage() {
   const { session } = useAuth()
+  const navigate = useNavigate()
   const { projectId: projectIdParameter } = useParams()
 
   const projectId = Number(projectIdParameter)
@@ -130,6 +140,13 @@ export function ProjectDetailPage() {
     useState<ProjectMember[]>([])
 
   const [ownershipTransferNotice, setOwnershipTransferNotice] =
+    useState<string | null>(null)
+
+  const [isEditing, setIsEditing] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [projectActionMessage, setProjectActionMessage] =
+    useState<string | null>(null)
+  const [projectActionError, setProjectActionError] =
     useState<string | null>(null)
 
   const [isLoading, setIsLoading] = useState(true)
@@ -156,6 +173,8 @@ export function ProjectDetailPage() {
       setIsNotFound(false)
       setErrorMessage(null)
       setOwnershipTransferNotice(null)
+      setProjectActionMessage(null)
+      setProjectActionError(null)
 
       try {
         const [
@@ -273,6 +292,86 @@ export function ProjectDetailPage() {
 
   function handleRetry() {
     setReloadVersion((current) => current + 1)
+  }
+
+  const currentMembership = projectMembers.find(
+    (member) => (
+      member.collaboratorId === session.collaborator.id &&
+      member.status === 'ACTIVE'
+    ),
+  )
+
+  const canEditProject =
+    currentMembership?.role === 'OWNER' ||
+    currentMembership?.role === 'MANAGER'
+
+  const canDeleteProject =
+    currentMembership?.role === 'OWNER'
+
+  const managerOptions: ProjectManagerOption[] =
+    projectMembers
+      .filter((member) => (
+        member.status === 'ACTIVE' &&
+        (
+          member.role === 'OWNER' ||
+          member.role === 'MANAGER'
+        )
+      ))
+      .map((member) => ({
+        id: member.collaboratorId,
+        name: member.collaboratorName,
+      }))
+
+  function handleProjectSaved(savedProject: Project) {
+    setProject(savedProject)
+    setManagerName(
+      managerOptions.find(
+        (manager) => manager.id === savedProject.managerId,
+      )?.name ?? 'Not assigned',
+    )
+    setIsEditing(false)
+    setProjectActionError(null)
+    setProjectActionMessage(
+      `Project #${savedProject.id} was updated.`,
+    )
+  }
+
+  async function handleDeleteProject() {
+    if (!session || !project || isDeleting) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Delete project "${project.name}"? Associated tasks will remain available without this project.`,
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setIsDeleting(true)
+    setProjectActionMessage(null)
+    setProjectActionError(null)
+
+    try {
+      await deleteProject(project.id, session)
+      navigate('/projects', { replace: true })
+    } catch (error) {
+      if (
+        error instanceof ApiClientError &&
+        error.status === 401
+      ) {
+        return
+      }
+
+      setProjectActionError(
+        error instanceof Error
+          ? error.message
+          : 'The project could not be deleted.',
+      )
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   function handleOwnershipTransferred(
@@ -435,6 +534,85 @@ export function ProjectDetailPage() {
                     </div>
                   </dl>
                 </section>
+
+                {(canEditProject || canDeleteProject) && (
+                  <section className="task-management-toolbar">
+                    <div>
+                      <p className="eyebrow">
+                        Project management
+                      </p>
+                      <p>
+                        Update the project information or remove
+                        it when it is no longer required.
+                      </p>
+                    </div>
+
+                    <div className="task-detail-actions">
+                      {canEditProject && (
+                        <button
+                          className="task-action-button"
+                          type="button"
+                          onClick={() => {
+                            setIsEditing((current) => !current)
+                            setProjectActionMessage(null)
+                            setProjectActionError(null)
+                          }}
+                          disabled={isDeleting}
+                        >
+                          {isEditing
+                            ? 'Close edit form'
+                            : 'Edit project'}
+                        </button>
+                      )}
+
+                      {canDeleteProject && (
+                        <button
+                          className="task-action-button task-action-button--danger"
+                          type="button"
+                          onClick={() => {
+                            void handleDeleteProject()
+                          }}
+                          disabled={isDeleting}
+                        >
+                          {isDeleting
+                            ? 'Deleting...'
+                            : 'Delete project'}
+                        </button>
+                      )}
+                    </div>
+                  </section>
+                )}
+
+                {isEditing && canEditProject && (
+                  <ProjectForm
+                    mode="edit"
+                    session={session}
+                    initialProject={project}
+                    managerOptions={managerOptions}
+                    onSaved={handleProjectSaved}
+                    onCancel={() => {
+                      setIsEditing(false)
+                    }}
+                  />
+                )}
+
+                {projectActionMessage && (
+                  <p
+                    className="task-action-message task-action-message--success"
+                    role="status"
+                  >
+                    {projectActionMessage}
+                  </p>
+                )}
+
+                {projectActionError && (
+                  <p
+                    className="task-action-message task-action-message--error"
+                    role="alert"
+                  >
+                    {projectActionError}
+                  </p>
+                )}
 
                 {ownershipTransferNotice && (
                   <p

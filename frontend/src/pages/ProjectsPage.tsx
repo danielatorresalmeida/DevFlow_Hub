@@ -5,7 +5,12 @@ import { getCollaborators } from '../api/collaboratorsApi'
 import { getProjects } from '../api/projectsApi'
 import { useAuth } from '../auth/useAuth'
 import { AppHeader } from '../components/AppHeader'
-import type { ProjectListItem } from '../types/project'
+import { ProjectForm } from '../components/ProjectForm'
+import type {
+  Project,
+  ProjectListItem,
+} from '../types/project'
+import type { Collaborator } from '../types/collaborator'
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: 'medium',
@@ -44,6 +49,15 @@ export function ProjectsPage() {
 
   const [projects, setProjects] =
     useState<ProjectListItem[]>([])
+
+  const [collaborators, setCollaborators] =
+    useState<Collaborator[]>([])
+
+  const [isCreateOpen, setIsCreateOpen] =
+    useState(false)
+
+  const [operationMessage, setOperationMessage] =
+    useState<string | null>(null)
 
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] =
@@ -97,6 +111,7 @@ export function ProjectsPage() {
           }),
         )
 
+        setCollaborators(collaboratorResponse)
         setProjects(projectItems)
       } catch (error) {
         if (controller.signal.aborted) {
@@ -137,6 +152,30 @@ export function ProjectsPage() {
     setReloadVersion((current) => current + 1)
   }
 
+  function handleProjectCreated(project: Project) {
+    if (!session) {
+      return
+    }
+
+    const managerName = collaborators.find(
+      (collaborator) => (
+        collaborator.id === project.managerId
+      ),
+    )?.name ?? session.collaborator.name
+
+    setProjects((current) => [
+      {
+        ...project,
+        managerName,
+      },
+      ...current,
+    ])
+    setIsCreateOpen(false)
+    setOperationMessage(
+      `Project #${project.id} was created.`,
+    )
+  }
+
   return (
     <main className="page">
       <section className="card card--wide">
@@ -149,6 +188,51 @@ export function ProjectsPage() {
           className="projects-content"
           aria-live="polite"
         >
+          {!isLoading && !errorMessage && (
+            <div className="task-management-toolbar">
+              <div>
+                <p className="eyebrow">
+                  Project management
+                </p>
+                <p>
+                  Create a project and become its owner and
+                  initial manager.
+                </p>
+              </div>
+
+              <button
+                className="task-action-button task-action-button--primary"
+                type="button"
+                onClick={() => {
+                  setIsCreateOpen((current) => !current)
+                  setOperationMessage(null)
+                }}
+              >
+                {isCreateOpen
+                  ? 'Close form'
+                  : 'Create project'}
+              </button>
+            </div>
+          )}
+
+          {!isLoading &&
+            !errorMessage &&
+            isCreateOpen && (
+              <ProjectForm
+                mode="create"
+                session={session}
+                onSaved={handleProjectCreated}
+                onCancel={() => {
+                  setIsCreateOpen(false)
+                }}
+              />
+            )}
+
+          {operationMessage && (
+            <p className="task-action-message task-action-message--success">
+              {operationMessage}
+            </p>
+          )}
           {isLoading && (
             <section className="dashboard-state">
               <h2>Loading projects</h2>
