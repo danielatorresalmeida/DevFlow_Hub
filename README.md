@@ -144,6 +144,7 @@ A arquitetura de controlo de acesso está documentada em:
 - Apresentação das tarefas associadas ao projeto.
 - Painel de membros integrado na página de detalhe do projeto, com listagem, adição, alteração de papel e remoção lógica.
 - Ações de gestão de membros adaptadas ao papel da membership do utilizador autenticado.
+- Mensagens de conflito de memberships sem instruções duplicadas e cursor `not-allowed` nos botões de ação desativados.
 - Lista autenticada de tarefas ligada a `GET /api/tasks`.
 - Página de detalhe de tarefa ligada a `GET /api/tasks/{id}`.
 - Apresentação do projeto, responsável, estado, prioridade, datas e tempo registado.
@@ -161,7 +162,7 @@ A arquitetura de controlo de acesso está documentada em:
 - O painel está integrado na página de detalhe do projeto e permite listar, adicionar, alterar o papel e remover membros.
 - As ações visíveis são determinadas pela membership do utilizador autenticado, e não pelo papel profissional global.
 - O `OWNER` e o atual `project.managerId` permanecem protegidos contra operações genéricas incompatíveis.
-- Foram adicionados 22 testes para gestão de memberships e transferência de ownership, e a suite frontend está validada com 38 testes, lint sem erros e build de produção concluído.
+- Foram adicionados 23 testes para gestão de memberships, transferência de ownership e feedback de conflitos, e a suite frontend está validada com 39 testes, lint sem erros e build de produção concluído.
 
 ### Trabalho ainda pendente
 
@@ -718,7 +719,7 @@ Na validação realizada em 29/07/2026:
 
 ```text
 Test Files: 8 passed
-Tests: 38 passed
+Tests: 39 passed
 Lint: aprovado
 Build: aprovado
 ```
