@@ -2377,4 +2377,94 @@ BUILD SUCCESS
 
 ### Próxima etapa
 
-Abrir o pull request, solicitar review técnica ao Rúben e validar cuidadosamente autorização, concorrência, atomicidade e consistência de dados antes do merge.
+O PR #43 foi aprovado e integrado em `develop`. A etapa seguinte avançou para a interface React de gestão de membros dos projetos.
+
+---
+
+## Marco 28 - 29/07/2026 - Interface React de gestão de membros
+
+### Estado
+
+Implementação concluída na branch `feature/project-membership-management-ui` e registada no commit:
+
+```text
+d39a5c3 feat: add project membership management UI
+```
+
+### Objetivo
+
+Disponibilizar na página de detalhe do projeto uma interface segura e responsiva para consultar e gerir memberships através dos endpoints já integrados no backend.
+
+### Implementação
+
+Foram adicionados:
+
+- tipos TypeScript para memberships, papéis, estados e pedidos;
+- cliente API para listar, adicionar, alterar e remover membros;
+- componente `ProjectMembersPanel` integrado na `ProjectDetailPage`;
+- utilitários centralizados para calcular permissões visuais;
+- estados de carregamento, erro, lista vazia e operação em curso;
+- estilos responsivos para desktop e dispositivos móveis.
+
+### Operações disponíveis
+
+A interface utiliza:
+
+```text
+GET    /api/projects/{projectId}/members
+POST   /api/projects/{projectId}/members
+PATCH  /api/projects/{projectId}/members/{collaboratorId}
+DELETE /api/projects/{projectId}/members/{collaboratorId}
+```
+
+A alteração de papel envia a `version` atual da membership para preservar o controlo de concorrência otimista.
+
+### Permissões visuais
+
+- `OWNER` pode gerir `MANAGER`, `CONTRIBUTOR` e `VIEWER`;
+- `MANAGER` pode gerir apenas `CONTRIBUTOR` e `VIEWER`;
+- `CONTRIBUTOR` e `VIEWER` têm acesso de consulta;
+- o papel `OWNER` não pode ser criado, alterado nem removido pelos controlos genéricos;
+- o atual `project.managerId` não pode ser removido nem despromovido para um papel incompatível;
+- colaboradores inativos e membros já ativos não são apresentados como opções de adição.
+
+As permissões são calculadas a partir da membership do utilizador autenticado no projeto. O campo profissional `Collaborator.role` não é utilizado como papel de autorização.
+
+### Tratamento de erros
+
+A interface apresenta mensagens para erros de validação e autorização, incluindo respostas `400`, `403`, `404` e `409 Conflict`. Depois de um conflito, o utilizador pode atualizar os dados antes de repetir a operação.
+
+### Testes adicionados
+
+Foram adicionados 16 testes:
+
+- 9 testes das regras de permissões;
+- 4 testes do cliente da API;
+- 3 testes do componente de gestão de membros.
+
+### Validação direcionada
+
+```text
+Test Files: 3 passed
+Tests: 16 passed
+```
+
+### Validação completa
+
+```text
+Test Files: 6 passed
+Tests: 32 passed
+Lint: aprovado
+Build: aprovado
+```
+
+### Impacto
+
+- a gestão de memberships ficou disponível no frontend;
+- o total da suite frontend passou de 16 para 32 testes;
+- a interface acompanha as regras de least privilege aplicadas pelo backend;
+- a transferência de ownership continua separada dos controlos genéricos de memberships.
+
+### Próxima etapa
+
+Criar o commit documental, publicar a branch e abrir um pull request concentrado apenas na interface de gestão de membros.
