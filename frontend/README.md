@@ -24,38 +24,31 @@ Frontend React do DevFlow Hub, responsável pela autenticação do utilizador, n
 - inclusão automática do Bearer token nos pedidos autenticados;
 - tratamento global de HTTP `401`;
 - dashboard ligado a `GET /api/dashboard`;
-- indicadores, tarefas recentes e projetos próximos;
-- estados de loading, erro, retry e ausência de dados;
+- indicadores, tarefas recentes e projetos com prazos próximos;
+- contagem de programas internos apresentada no dashboard, com indicação de que a interface de gestão está planeada;
 - cabeçalho autenticado reutilizável;
-- navegação entre dashboard, projetos e tarefas;
-- lista autenticada de projetos;
-- associação dos projetos aos respetivos gestores;
-- apresentação de estado, descrição, gestor e datas;
-- estados de loading, erro, retry e lista vazia nos projetos;
-- ligação de cada cartão para o respetivo detalhe;
-- detalhe do projeto ligado a `GET /api/projects/{id}`;
-- apresentação das tarefas associadas ao projeto;
-- resolução dos nomes do gestor e dos responsáveis;
-- estados de projeto inexistente, identificador inválido e projeto sem tarefas;
-- lista autenticada de tarefas;
-- associação das tarefas aos respetivos projetos e responsáveis;
-- apresentação de estado, prioridade, descrição, tempo registado e datas;
-- indicação de tarefas com temporizador ativo;
-- estados de loading, erro, retry e lista vazia nas tarefas;
-- ligação View task na lista de tarefas e no detalhe do projeto;
-- detalhe da tarefa ligado a `GET /api/tasks/{id}`;
-- apresentação do projeto, responsável e estado do temporizador;
-- ligação do projeto associado ao respetivo detalhe;
+- lista e detalhe de projetos;
+- criação, edição e eliminação de projetos;
+- criador registado automaticamente como `OWNER` e gestor inicial;
+- edição de projetos disponível a `OWNER` e `MANAGER`;
+- eliminação de projetos reservada ao `OWNER`;
+- gestão de memberships com adição, alteração de papel e remoção lógica;
+- transferência explícita de ownership;
+- lista e detalhe de tarefas;
+- criação de tarefas independentes e associadas a projetos;
+- edição de título, descrição, estado, prioridade, projeto e responsável;
+- eliminação de tarefas com confirmação;
+- responsáveis de projeto limitados às memberships ativas elegíveis;
+- `CONTRIBUTOR` limitado à atribuição a si próprio;
+- `VIEWER` em modo de consulta;
+- início, pausa, retoma e conclusão do temporizador;
 - atualização visual do tempo durante uma sessão ativa;
-- início, pausa e retoma do temporizador;
-- conclusão da tarefa com confirmação;
-- mensagens de sucesso e erro nas operações;
-- bloqueio do temporizador depois da conclusão;
-- tratamento de identificadores inválidos e tarefas inexistentes;
-- testes automatizados do armazenamento da autenticação, das rotas protegidas e da configuração de rotas;
-- layout responsivo.
+- mensagens de sucesso, validação, conflito e erro;
+- estados de loading, retry, recurso inexistente e ausência de dados;
+- layout responsivo;
+- testes automatizados dos clientes API, formulários, autenticação, permissões, componentes e rotas.
 
-O backend aplica autorização de recurso. Uma ação pode ser recusada mesmo quando o controlo ainda está visível no frontend, por exemplo quando o utilizador não é o assignee da tarefa. Uma melhoria futura deve tornar a interface consciente das capabilities devolvidas pela API.
+Os controlos apresentados no frontend refletem as permissões conhecidas pela interface, mas não substituem a autorização do backend. A API continua a decidir se o utilizador pode ver ou alterar cada projeto ou tarefa.
 
 ## Estrutura principal
 
@@ -66,37 +59,24 @@ frontend/src/
 │   ├── authApi.ts
 │   ├── collaboratorsApi.ts
 │   ├── dashboardApi.ts
+│   ├── projectMembershipsApi.ts
+│   ├── projectOwnershipApi.ts
 │   ├── projectsApi.ts
-│   └── tasksApi.ts
+│   ├── tasksApi.ts
+│   └── *.test.ts
 ├── auth/
-│   ├── AuthContext.ts
-│   ├── AuthProvider.tsx
-│   ├── authStorage.ts
-│   ├── authStorage.test.ts
-│   └── useAuth.ts
 ├── components/
-│   └── AppHeader.tsx
+│   ├── AppHeader.tsx
+│   ├── ProjectForm.tsx
+│   ├── ProjectMembersPanel.tsx
+│   ├── ProjectOwnershipTransferPanel.tsx
+│   ├── TaskForm.tsx
+│   └── *.test.tsx
 ├── pages/
-│   ├── DashboardPage.tsx
-│   ├── LoginPage.tsx
-│   ├── NotFoundPage.tsx
-│   ├── ProjectDetailPage.tsx
-│   ├── ProjectsPage.tsx
-│   ├── TaskDetailPage.tsx
-│   └── TasksPage.tsx
 ├── routes/
-│   ├── AppRoutes.tsx
-│   ├── AppRoutes.test.tsx
-│   ├── ProtectedRoute.tsx
-│   └── ProtectedRoute.test.tsx
 ├── test/
-│   └── setup.ts
 ├── types/
-│   ├── auth.ts
-│   ├── collaborator.ts
-│   ├── dashboard.ts
-│   ├── project.ts
-│   └── task.ts
+├── utils/
 ├── index.css
 └── main.tsx
 ```
@@ -175,8 +155,8 @@ npm run build
 Na validação realizada em 29/07/2026:
 
 ```text
-Test Files: 3 passed
-Tests: 16 passed
+Test Files: 12 passed
+Tests: 53 passed
 Lint: aprovado
 Build: aprovado
 ```

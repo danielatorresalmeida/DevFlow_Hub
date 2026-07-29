@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import {
+  Link,
+  useNavigate,
+  useParams,
+} from 'react-router'
 import { ApiClientError } from '../api/apiClient'
 import { getCollaborators } from '../api/collaboratorsApi'
 import { getProjects } from '../api/projectsApi'
 import {
   completeTask,
+  deleteTask,
   getTaskById,
   pauseTaskTimer,
   resumeTaskTimer,
@@ -12,6 +17,9 @@ import {
 } from '../api/tasksApi'
 import { useAuth } from '../auth/useAuth'
 import { AppHeader } from '../components/AppHeader'
+import { TaskForm } from '../components/TaskForm'
+import type { Collaborator } from '../types/collaborator'
+import type { Project } from '../types/project'
 import type { Task } from '../types/task'
 
 type TaskAction =
@@ -123,8 +131,37 @@ function getTimerStatus(task: Task): string {
   return 'Not running'
 }
 
+function resolveProjectName(
+  task: Task,
+  projects: Project[],
+): string {
+  if (task.projectId === null) {
+    return 'No project'
+  }
+
+  return projects.find(
+    (project) => project.id === task.projectId,
+  )?.name ?? 'Unknown project'
+}
+
+function resolveAssigneeName(
+  task: Task,
+  collaborators: Collaborator[],
+): string {
+  if (task.assigneeId === null) {
+    return 'Not assigned'
+  }
+
+  return collaborators.find(
+    (collaborator) => (
+      collaborator.id === task.assigneeId
+    ),
+  )?.name ?? 'Unknown collaborator'
+}
+
 export function TaskDetailPage() {
   const { session } = useAuth()
+  const navigate = useNavigate()
   const { taskId: taskIdParameter } = useParams()
 
   const taskId = Number(taskIdParameter)
@@ -132,6 +169,10 @@ export function TaskDetailPage() {
     Number.isSafeInteger(taskId) && taskId > 0
 
   const [task, setTask] = useState<Task | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [collaborators, setCollaborators] = useState<
+    Collaborator[]
+  >([])
   const [projectName, setProjectName] =
     useState('No project')
   const [assigneeName, setAssigneeName] =
@@ -149,6 +190,8 @@ export function TaskDetailPage() {
 
   const [activeAction, setActiveAction] =
     useState<TaskAction | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const [actionMessage, setActionMessage] =
     useState<string | null>(null)
@@ -192,38 +235,21 @@ export function TaskDetailPage() {
           ),
         ])
 
-        const projectNames = new Map(
-          projectResponse.map((project) => [
-            project.id,
-            project.name,
-          ]),
-        )
-
-        const collaboratorNames = new Map(
-          collaboratorResponse.map((collaborator) => [
-            collaborator.id,
-            collaborator.name,
-          ]),
-        )
-
         setTask(taskResponse)
-
+        setProjects(projectResponse)
+        setCollaborators(collaboratorResponse)
         setProjectName(
-          taskResponse.projectId === null
-            ? 'No project'
-            : projectNames.get(
-                taskResponse.projectId,
-              ) ?? 'Unknown project',
+          resolveProjectName(
+            taskResponse,
+            projectResponse,
+          ),
         )
-
         setAssigneeName(
-          taskResponse.assigneeId === null
-            ? 'Not assigned'
-            : collaboratorNames.get(
-                taskResponse.assigneeId,
-              ) ?? 'Unknown collaborator',
+          resolveAssigneeName(
+            taskResponse,
+            collaboratorResponse,
+          ),
         )
-
         setCurrentTime(Date.now())
       } catch (error) {
         if (controller.signal.aborted) {
@@ -293,6 +319,61 @@ export function TaskDetailPage() {
 
   function handleRetry() {
     setReloadVersion((current) => current + 1)
+  }
+
+  function handleTaskSaved(updatedTask: Task) {
+    setTask(updatedTask)
+    setProjectName(
+      resolveProjectName(updatedTask, projects),
+    )
+    setAssigneeName(
+      resolveAssigneeName(
+        updatedTask,
+        collaborators,
+      ),
+    )
+    setCurrentTime(Date.now())
+    setIsEditing(false)
+    setActionError(null)
+    setActionMessage('The task was updated.')
+  }
+
+  async function handleDelete(): Promise<void> {
+    if (!task || !session || isDeleting) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Delete task #${task.id}? This action cannot be undone.`,
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setIsDeleting(true)
+    setActionMessage(null)
+    setActionError(null)
+
+    try {
+      await deleteTask(task.id, session)
+      navigate('/tasks', { replace: true })
+    } catch (error) {
+      if (
+        error instanceof ApiClientError &&
+        error.status === 401
+      ) {
+        return
+      }
+
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : 'The task could not be deleted.',
+      )
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   async function runTaskAction(
@@ -405,7 +486,8 @@ export function TaskDetailPage() {
     void runTaskAction('complete')
   }
 
-  const isActionRunning = activeAction !== null
+  const isActionRunning =
+    activeAction !== null || isDeleting
 
   const shouldResume =
     task !== null &&
@@ -421,7 +503,7 @@ export function TaskDetailPage() {
       <section className="card card--wide">
         <AppHeader
           title={task?.title ?? 'Task detail'}
-          description="Review task information, assignment and tracked time."
+          description="Review and manage task information, assignment and tracked time."
         />
 
         <div
@@ -484,199 +566,256 @@ export function TaskDetailPage() {
             !isNotFound &&
             !errorMessage &&
             task && (
-              <section className="task-detail-overview">
-                <header className="task-detail-heading">
+              <>
+                <section className="task-management-toolbar">
                   <div>
-                    <span className="task-reference">
-                      Task #{task.id}
-                    </span>
-
-                    <h2>{task.title}</h2>
+                    <p className="eyebrow">
+                      Task management
+                    </p>
+                    <p>
+                      Edit the task or remove it from the
+                      workspace.
+                    </p>
                   </div>
 
-                  <div className="task-card-badges">
-                    <span
-                      className={getStatusClassName(
-                        task.status,
-                      )}
+                  <div className="task-action-buttons">
+                    <button
+                      className="task-action-button task-action-button--secondary"
+                      type="button"
+                      disabled={isActionRunning}
+                      onClick={() => {
+                        setIsEditing((current) => !current)
+                        setActionMessage(null)
+                        setActionError(null)
+                      }}
                     >
-                      {formatLabel(task.status)}
-                    </span>
+                      {isEditing
+                        ? 'Close editor'
+                        : 'Edit task'}
+                    </button>
 
-                    <span
-                      className={getPriorityClassName(
-                        task.priority,
-                      )}
+                    <button
+                      className="task-action-button task-action-button--danger"
+                      type="button"
+                      disabled={isActionRunning}
+                      onClick={() => {
+                        void handleDelete()
+                      }}
                     >
-                      {formatLabel(task.priority)}
-                    </span>
+                      {isDeleting
+                        ? 'Deleting…'
+                        : 'Delete task'}
+                    </button>
                   </div>
-                </header>
+                </section>
 
-                <p className="task-detail-description">
-                  {task.description?.trim() ||
-                    'No description has been added.'}
-                </p>
-
-                {task.timerActive && (
-                  <div className="timer-indicator">
-                    <span
-                      className="timer-indicator-dot"
-                      aria-hidden="true"
-                    />
-                    Timer currently running
-                  </div>
+                {isEditing && (
+                  <TaskForm
+                    mode="edit"
+                    session={session}
+                    projects={projects}
+                    initialTask={task}
+                    onSaved={handleTaskSaved}
+                    onCancel={() => {
+                      setIsEditing(false)
+                    }}
+                  />
                 )}
 
-                <dl className="task-detail-metadata">
-                  <div>
-                    <dt>Project</dt>
-                    <dd>
-                      {task.projectId === null ? (
-                        projectName
-                      ) : (
-                        <Link
-                          className="task-relation-link"
-                          to={`/projects/${task.projectId}`}
-                        >
-                          {projectName}
-                        </Link>
-                      )}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Assignee</dt>
-                    <dd>{assigneeName}</dd>
-                  </div>
-
-                  <div>
-                    <dt>Tracked time</dt>
-                    <dd>
-                      {formatDuration(
-                        getDisplayedTime(
-                          task,
-                          currentTime,
-                        ),
-                      )}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Timer status</dt>
-                    <dd>{getTimerStatus(task)}</dd>
-                  </div>
-
-                  <div>
-                    <dt>Timer started</dt>
-                    <dd>
-                      {formatDateTime(
-                        task.timerStartedAt,
-                      )}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Created</dt>
-                    <dd>
-                      {formatDateTime(task.createdAt)}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Last updated</dt>
-                    <dd>
-                      {formatDateTime(task.updatedAt)}
-                    </dd>
-                  </div>
-                </dl>
-
-                <section
-                  className="task-timer-controls"
-                  aria-busy={isActionRunning}
-                >
-                  <div className="task-timer-controls-heading">
+                <section className="task-detail-overview">
+                  <header className="task-detail-heading">
                     <div>
-                      <p className="eyebrow">
-                        Timer workflow
-                      </p>
+                      <span className="task-reference">
+                        Task #{task.id}
+                      </span>
 
-                      <h3>Task controls</h3>
+                      <h2>{task.title}</h2>
                     </div>
 
-                    <p>
-                      Start, pause or complete the current
-                      task.
-                    </p>
-                  </div>
-
-                  {task.status === 'COMPLETED' ? (
-                    <p className="task-completed-message">
-                      This task is completed and its timer
-                      cannot be restarted.
-                    </p>
-                  ) : (
-                    <div className="task-action-buttons">
-                      {task.timerActive ? (
-                        <button
-                          className="task-action-button task-action-button--secondary"
-                          type="button"
-                          disabled={isActionRunning}
-                          onClick={handlePause}
-                        >
-                          {activeAction === 'pause'
-                            ? 'Pausing...'
-                            : 'Pause timer'}
-                        </button>
-                      ) : (
-                        <button
-                          className="task-action-button task-action-button--primary"
-                          type="button"
-                          disabled={isActionRunning}
-                          onClick={handleStartOrResume}
-                        >
-                          {activeAction === 'start'
-                            ? 'Starting...'
-                            : activeAction === 'resume'
-                              ? 'Resuming...'
-                              : shouldResume
-                                ? 'Resume timer'
-                                : 'Start timer'}
-                        </button>
-                      )}
-
-                      <button
-                        className="task-action-button task-action-button--danger"
-                        type="button"
-                        disabled={isActionRunning}
-                        onClick={handleComplete}
+                    <div className="task-card-badges">
+                      <span
+                        className={getStatusClassName(
+                          task.status,
+                        )}
                       >
-                        {activeAction === 'complete'
-                          ? 'Completing...'
-                          : 'Complete task'}
-                      </button>
+                        {formatLabel(task.status)}
+                      </span>
+
+                      <span
+                        className={getPriorityClassName(
+                          task.priority,
+                        )}
+                      >
+                        {formatLabel(task.priority)}
+                      </span>
+                    </div>
+                  </header>
+
+                  <p className="task-detail-description">
+                    {task.description?.trim() ||
+                      'No description has been added.'}
+                  </p>
+
+                  {task.timerActive && (
+                    <div className="timer-indicator">
+                      <span
+                        className="timer-indicator-dot"
+                        aria-hidden="true"
+                      />
+                      Timer currently running
                     </div>
                   )}
 
-                  {actionMessage && (
-                    <p
-                      className="task-action-message task-action-message--success"
-                      role="status"
-                    >
-                      {actionMessage}
-                    </p>
-                  )}
+                  <dl className="task-detail-metadata">
+                    <div>
+                      <dt>Project</dt>
+                      <dd>
+                        {task.projectId === null ? (
+                          projectName
+                        ) : (
+                          <Link
+                            className="task-relation-link"
+                            to={`/projects/${task.projectId}`}
+                          >
+                            {projectName}
+                          </Link>
+                        )}
+                      </dd>
+                    </div>
 
-                  {actionError && (
-                    <p
-                      className="task-action-message task-action-message--error"
-                      role="alert"
-                    >
-                      {actionError}
-                    </p>
-                  )}
+                    <div>
+                      <dt>Assignee</dt>
+                      <dd>{assigneeName}</dd>
+                    </div>
+
+                    <div>
+                      <dt>Tracked time</dt>
+                      <dd>
+                        {formatDuration(
+                          getDisplayedTime(
+                            task,
+                            currentTime,
+                          ),
+                        )}
+                      </dd>
+                    </div>
+
+                    <div>
+                      <dt>Timer status</dt>
+                      <dd>{getTimerStatus(task)}</dd>
+                    </div>
+
+                    <div>
+                      <dt>Timer started</dt>
+                      <dd>
+                        {formatDateTime(
+                          task.timerStartedAt,
+                        )}
+                      </dd>
+                    </div>
+
+                    <div>
+                      <dt>Created</dt>
+                      <dd>
+                        {formatDateTime(task.createdAt)}
+                      </dd>
+                    </div>
+
+                    <div>
+                      <dt>Last updated</dt>
+                      <dd>
+                        {formatDateTime(task.updatedAt)}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <section
+                    className="task-timer-controls"
+                    aria-busy={isActionRunning}
+                  >
+                    <div className="task-timer-controls-heading">
+                      <div>
+                        <p className="eyebrow">
+                          Timer workflow
+                        </p>
+
+                        <h3>Task controls</h3>
+                      </div>
+
+                      <p>
+                        Start, pause or complete the current
+                        task.
+                      </p>
+                    </div>
+
+                    {task.status === 'COMPLETED' ? (
+                      <p className="task-completed-message">
+                        This task is completed and its timer
+                        cannot be restarted.
+                      </p>
+                    ) : (
+                      <div className="task-action-buttons">
+                        {task.timerActive ? (
+                          <button
+                            className="task-action-button task-action-button--secondary"
+                            type="button"
+                            disabled={isActionRunning}
+                            onClick={handlePause}
+                          >
+                            {activeAction === 'pause'
+                              ? 'Pausing...'
+                              : 'Pause timer'}
+                          </button>
+                        ) : (
+                          <button
+                            className="task-action-button task-action-button--primary"
+                            type="button"
+                            disabled={isActionRunning}
+                            onClick={handleStartOrResume}
+                          >
+                            {activeAction === 'start'
+                              ? 'Starting...'
+                              : activeAction === 'resume'
+                                ? 'Resuming...'
+                                : shouldResume
+                                  ? 'Resume timer'
+                                  : 'Start timer'}
+                          </button>
+                        )}
+
+                        <button
+                          className="task-action-button task-action-button--danger"
+                          type="button"
+                          disabled={isActionRunning}
+                          onClick={handleComplete}
+                        >
+                          {activeAction === 'complete'
+                            ? 'Completing...'
+                            : 'Complete task'}
+                        </button>
+                      </div>
+                    )}
+
+                    {actionMessage && (
+                      <p
+                        className="task-action-message task-action-message--success"
+                        role="status"
+                      >
+                        {actionMessage}
+                      </p>
+                    )}
+
+                    {actionError && (
+                      <p
+                        className="task-action-message task-action-message--error"
+                        role="alert"
+                      >
+                        {actionError}
+                      </p>
+                    )}
+                  </section>
                 </section>
-              </section>
+              </>
             )}
         </div>
       </section>

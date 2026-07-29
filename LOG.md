@@ -2654,3 +2654,126 @@ Modules transformed: 99
 ### Próxima etapa
 
 Publicar a branch e abrir um pull request de manutenção para `develop`.
+
+---
+
+## Marco 31 - 29/07/2026 - Gestão completa de projetos e tarefas no frontend
+
+### Estado
+
+Implementação concluída na branch `feature/project-task-management-ui` e registada nos commits:
+
+```text
+a51e3ce feat: add task management UI
+51b913f feat: add project management UI
+1f836eb fix: clarify programs dashboard metric
+```
+
+### Objetivo
+
+Concluir no frontend as operações de criação, edição e eliminação de projetos e tarefas previstas no planeamento inicial, mantendo as regras de autorização já aplicadas pelo backend.
+
+### Gestão de tarefas
+
+Foram adicionados:
+
+- cliente API para criação, atualização e eliminação de tarefas;
+- componente reutilizável `TaskForm`;
+- criação de tarefas independentes e associadas a projetos;
+- edição de título, descrição, estado, prioridade, projeto e responsável;
+- eliminação com confirmação;
+- atualização imediata das listas e páginas de detalhe;
+- tratamento de erros `400`, `401`, `403`, `404` e `409`;
+- 3 testes do cliente API e 4 testes do formulário.
+
+As tarefas independentes ficam atribuídas ao colaborador autenticado. Nas tarefas de projeto, os responsáveis elegíveis são obtidos a partir das memberships ativas. O papel `CONTRIBUTOR` fica limitado à atribuição a si próprio e o papel `VIEWER` permanece em modo de consulta.
+
+### Gestão de projetos
+
+Foram adicionados:
+
+- cliente API para criação, atualização e eliminação de projetos;
+- componente reutilizável `ProjectForm`;
+- criação com nome, descrição, estado e datas;
+- edição dos dados do projeto e do respetivo gestor;
+- eliminação com confirmação;
+- integração dos controlos nas páginas de lista e detalhe;
+- mensagens de sucesso, validação e erro;
+- 3 testes do cliente API e 4 testes do formulário.
+
+O criador torna-se automaticamente `OWNER` e gestor inicial. A edição é disponibilizada a `OWNER` e `MANAGER`. A eliminação permanece reservada ao `OWNER`, em conformidade com a matriz de autorização.
+
+### Validação técnica
+
+Validação direcionada das tarefas:
+
+```text
+Test Files: 2 passed
+Tests: 7 passed
+```
+
+Validação direcionada dos projetos:
+
+```text
+Test Files: 2 passed
+Tests: 7 passed
+```
+
+Validação completa do frontend:
+
+```text
+Test Files: 12 passed
+Tests: 53 passed
+Lint: aprovado
+Build: aprovado
+Modules transformed: 101
+```
+
+O backend não foi alterado nesta etapa. A validação final anterior permaneceu aplicável:
+
+```text
+Tests run: 236
+Failures: 0
+Errors: 0
+Skipped: 0
+BUILD SUCCESS
+```
+
+### Validação manual
+
+Foram confirmados:
+
+- criação, persistência, edição e eliminação de projetos;
+- criação de tarefas independentes e de projeto;
+- associação correta a projeto e responsável;
+- edição de título, descrição, estado, prioridade, projeto e responsável;
+- funcionamento do temporizador depois das alterações;
+- eliminação de tarefas temporárias;
+- edição de projeto permitida a `OWNER` e `MANAGER`;
+- eliminação de projeto reservada ao `OWNER`;
+- criação de tarefa de projeto por `CONTRIBUTOR` limitada ao próprio utilizador;
+- ausência de controlos de mutação para `VIEWER`;
+- persistência dos dados depois de atualizar a página.
+
+### Alinhamento com o planeamento inicial
+
+Com esta etapa, os requisitos funcionais RF01 a RF15 e RF18 ficam representados de ponta a ponta na aplicação. Os requisitos RF16 e RF17 possuem backend persistente e API REST, mas continuam sem uma página React dedicada para consulta e gestão de programas internos.
+
+A implementação final também inclui funcionalidades além do escopo inicial, nomeadamente autenticação JWT, autorização por membership, transferência transacional de ownership, concorrência otimista, documentos, metadata de anexos, object storage local e validação automática no GitHub.
+
+### Evoluções futuras registadas
+
+- interface React para programas internos;
+- páginas de notas associadas a projetos e tarefas;
+- autorização específica de documentos e anexos;
+- upload, download e eliminação segura de ficheiros;
+- importação e migração de projetos, tarefas, notas, colaboradores e registos de tempo provenientes do Notion e do Toggl Track;
+- mapeamento de campos, prevenção de duplicados, resolução de conflitos e rastreabilidade da origem dos dados.
+
+### Clarificação do dashboard
+
+O card `Programs` mantém a contagem real devolvida pelo backend e passou a apresentar `Management UI planned`. Desta forma, o dashboard comunica que os dados já existem sem sugerir uma página de gestão ainda indisponível.
+
+### Próxima etapa
+
+Atualizar a documentação, publicar a branch, executar os checks automáticos, integrar em `develop` e criar o tag final da versão apresentada.

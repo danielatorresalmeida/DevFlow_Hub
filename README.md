@@ -14,7 +14,7 @@ Este repositório representa uma reorganização limpa e estruturada do projeto 
 
 As datas dos commits reorganizados representam a organização técnica do novo repositório e não substituem as datas reais registadas no `LOG.md`.
 
-O estado descrito neste README corresponde ao código integrado em `develop` até ao PR #40.
+O estado descrito neste README corresponde à versão preparada para a apresentação final de 30/07/2026, incluindo a gestão de projetos e tarefas no frontend.
 
 ## Arquitetura atual
 
@@ -138,15 +138,23 @@ A arquitetura de controlo de acesso está documentada em:
 - Tratamento global de respostas `401`, limpeza da sessão e redirecionamento para `/login`.
 - Dashboard autenticado ligado a `GET /api/dashboard`.
 - Indicadores, distribuição de tarefas, tarefas recentes e projetos com prazos próximos.
+- A contagem de programas internos é apresentada no dashboard; a interface de gestão permanece planeada.
 - Cabeçalho autenticado reutilizável com identidade do utilizador, navegação e logout.
 - Lista autenticada de projetos ligada a `GET /api/projects`.
 - Página de detalhe de projeto ligada a `GET /api/projects/{id}`.
+- Criação, edição e eliminação de projetos através da interface.
+- O criador torna-se automaticamente `OWNER` e gestor inicial.
+- Edição disponível a `OWNER` e `MANAGER`; eliminação reservada ao `OWNER`.
 - Apresentação das tarefas associadas ao projeto.
 - Painel de membros integrado na página de detalhe do projeto, com listagem, adição, alteração de papel e remoção lógica.
 - Ações de gestão de membros adaptadas ao papel da membership do utilizador autenticado.
 - Mensagens de conflito de memberships sem instruções duplicadas e cursor `not-allowed` nos botões de ação desativados.
 - Lista autenticada de tarefas ligada a `GET /api/tasks`.
 - Página de detalhe de tarefa ligada a `GET /api/tasks/{id}`.
+- Criação, edição e eliminação de tarefas através da interface.
+- Alteração de título, descrição, estado, prioridade, projeto e responsável.
+- Tarefas independentes atribuídas ao colaborador autenticado.
+- Responsáveis de projeto limitados às memberships ativas elegíveis.
 - Apresentação do projeto, responsável, estado, prioridade, datas e tempo registado.
 - Início, pausa, retoma e conclusão do temporizador através da interface.
 - Atualização visual do tempo durante uma sessão ativa.
@@ -154,28 +162,40 @@ A arquitetura de controlo de acesso está documentada em:
 - Interface responsiva validada em desktop e numa viewport móvel de `390 × 844`.
 - Testes automatizados de armazenamento da autenticação, rotas protegidas e configuração de rotas.
 - `npm run lint`, `npm test` e `npm run build` validados com sucesso.
-- Suite frontend validada em 29/07/2026 com 32 testes em 6 ficheiros.
+- Suite frontend validada em 29/07/2026 com 53 testes em 12 ficheiros.
 
-### Trabalho em curso
+### Alinhamento com o planeamento inicial
 
-- A interface React de gestão de membros foi implementada na branch `feature/project-membership-management-ui`.
-- O painel está integrado na página de detalhe do projeto e permite listar, adicionar, alterar o papel e remover membros.
-- As ações visíveis são determinadas pela membership do utilizador autenticado, e não pelo papel profissional global.
-- O `OWNER` e o atual `project.managerId` permanecem protegidos contra operações genéricas incompatíveis.
-- Foram adicionados 23 testes para gestão de memberships, transferência de ownership e feedback de conflitos, e a suite frontend está validada com 39 testes, lint sem erros e build de produção concluído.
+A versão preparada para apresentação concretiza de ponta a ponta os requisitos funcionais RF01 a RF15 e RF18 definidos no relatório inicial:
 
-### Trabalho ainda pendente
+- autenticação de colaboradores;
+- dashboard com dados dinâmicos;
+- consulta, criação, edição e eliminação de projetos;
+- consulta, criação, edição e eliminação de tarefas;
+- alteração de estado, prioridade, projeto e responsável;
+- associação entre tarefas e projetos;
+- temporizador com início, pausa, retoma, conclusão e tempo acumulado;
+- API REST e persistência PostgreSQL.
 
-- Criação, edição e eliminação de projetos e tarefas através do frontend.
+Os requisitos RF16 e RF17 possuem CRUD persistente e API REST no backend, mas continuam parcialmente concluídos por ainda não existir uma página React dedicada aos programas internos.
+
+A arquitetura, organização por camadas, execução local, documentação e automação de testes concretizam os requisitos não funcionais dentro do âmbito académico. A comparação detalhada entre a proposta inicial e o resultado final será apresentada no relatório final.
+
+### Trabalho ainda pendente e roadmap
+
+- Página React para consulta e gestão de programas internos.
 - Autorização de documentos e anexos através da mesma cadeia de acesso dos projetos e tarefas.
+- Páginas de notas associadas a projetos e tarefas.
 - Proveniência de documentos e anexos, incluindo `createdById` e `uploadedById`.
-- Upload, download e eliminação de conteúdo de anexos através da API.
+- Upload, download e eliminação segura de conteúdo de anexos através da API.
+- Centro de importação para migrar projetos, tarefas, notas, colaboradores e registos de tempo do Notion e do Toggl Track.
+- Mapeamento de campos, prevenção de duplicados, resolução de conflitos e rastreabilidade das importações.
 - Interface de alteração e redefinição segura de palavra-passe.
 - Política administrativa global separada para colaboradores e programas internos.
 - Ajuste do dashboard para distinguir métricas pessoais de métricas globais.
 - Testes Maven de integração com uma instância PostgreSQL dedicada.
 - Revisão da estratégia de armazenamento e renovação do token antes de produção.
-- Validação do JAR final e do frontend compilado numa instalação independente.
+- Validação dos artefactos finais numa instalação independente.
 
 ## Estrutura principal
 
@@ -586,6 +606,10 @@ O frontend disponibiliza uma página protegida de detalhe através da rota:
 A página:
 
 - obtém o projeto através de `GET /api/projects/{id}`;
+- permite criar projetos a partir da página de listagem;
+- permite editar nome, descrição, estado, datas e gestor;
+- permite eliminar o projeto com confirmação quando o utilizador é `OWNER`;
+- calcula os controlos disponíveis a partir da membership ativa;
 - resolve o nome do gestor com os dados de `GET /api/collaborators`;
 - carrega as tarefas através de `GET /api/tasks`;
 - filtra apenas as tarefas cujo `projectId` corresponde ao projeto;
@@ -609,6 +633,10 @@ O frontend disponibiliza uma página protegida através da rota:
 A página:
 
 - obtém a tarefa através de `GET /api/tasks/{id}`;
+- permite criar tarefas independentes e associadas a projetos;
+- permite editar título, descrição, estado, prioridade, projeto e responsável;
+- permite eliminar tarefas com confirmação;
+- adapta responsáveis e operações às permissões do utilizador;
 - resolve o projeto através de `GET /api/projects`;
 - resolve o responsável através de `GET /api/collaborators`;
 - apresenta estado, prioridade, descrição e relações;
@@ -718,8 +746,8 @@ npm run build
 Na validação realizada em 29/07/2026:
 
 ```text
-Test Files: 8 passed
-Tests: 39 passed
+Test Files: 12 passed
+Tests: 53 passed
 Lint: aprovado
 Build: aprovado
 ```

@@ -300,6 +300,7 @@ export function DashboardPage() {
                   <article className="metric-card">
                     <span>Programs</span>
                     <strong>{summary.programCount}</strong>
+                    <small>Management UI planned</small>
                   </article>
 
                   <article className="metric-card">
