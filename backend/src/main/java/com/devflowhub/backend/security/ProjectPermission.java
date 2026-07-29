@@ -33,6 +33,10 @@ public enum ProjectPermission {
             )
     ),
 
+    TRANSFER_PROJECT_OWNERSHIP(
+            EnumSet.of(ProjectMembershipRole.OWNER)
+    ),
+
     DELETE_PROJECT(
             EnumSet.of(ProjectMembershipRole.OWNER)
     );

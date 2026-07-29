@@ -1,5 +1,6 @@
 package com.devflowhub.backend.repository;
 
+import com.devflowhub.backend.domain.ProjectMembershipRole;
 import com.devflowhub.backend.domain.ProjectMembershipStatus;
 import com.devflowhub.backend.entity.ProjectMembership;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,6 +29,12 @@ public interface ProjectMembershipRepository
     boolean existsByProjectIdAndCollaboratorIdAndStatus(
             Long projectId,
             Long collaboratorId,
+            ProjectMembershipStatus status
+    );
+
+    long countByProjectIdAndRoleAndStatus(
+            Long projectId,
+            ProjectMembershipRole role,
             ProjectMembershipStatus status
     );
 
