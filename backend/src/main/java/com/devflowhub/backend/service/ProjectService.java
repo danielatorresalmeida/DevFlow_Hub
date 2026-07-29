@@ -139,7 +139,10 @@ public class ProjectService {
         Project existing = getStoredProjectRequired(id);
 
         prepareAndValidateProjectData(updatedData);
-        validateCollaborator(updatedData.getManagerId());
+        validateProjectManager(
+                id,
+                updatedData.getManagerId()
+        );
 
         existing.setName(updatedData.getName());
         existing.setDescription(updatedData.getDescription());
@@ -212,17 +215,43 @@ public class ProjectService {
         }
     }
 
-    private void validateCollaborator(
+    private void validateProjectManager(
+            Long projectId,
             Long collaboratorId
     ) {
+        if (collaboratorId == null) {
+            return;
+        }
+
+        Collaborator collaborator = collaboratorRepository
+                .findById(collaboratorId)
+                .orElseThrow(() -> new InvalidOperationException(
+                        "The selected project manager does not exist."
+                ));
+
+        if (!Boolean.TRUE.equals(collaborator.getActive())) {
+            throw new InvalidOperationException(
+                    "The selected project manager must be active."
+            );
+        }
+
+        ProjectMembership membership =
+                projectMembershipRepository
+                        .findByProjectIdAndCollaboratorIdAndStatus(
+                                projectId,
+                                collaboratorId,
+                                ProjectMembershipStatus.ACTIVE
+                        )
+                        .orElseThrow(() -> new InvalidOperationException(
+                                "The selected project manager must be an active member of this project."
+                        ));
+
         if (
-            collaboratorId != null &&
-            !collaboratorRepository.existsById(
-                    collaboratorId
-            )
+            membership.getRole() != ProjectMembershipRole.OWNER &&
+            membership.getRole() != ProjectMembershipRole.MANAGER
         ) {
             throw new InvalidOperationException(
-                    "The selected project manager does not exist."
+                    "The selected project manager must have the OWNER or MANAGER project role."
             );
         }
     }
