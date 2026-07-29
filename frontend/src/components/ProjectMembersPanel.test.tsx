@@ -1,13 +1,31 @@
 import {
+  fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
+import { ApiClientError } from '../api/apiClient'
+import {
+  updateProjectMemberRole,
+} from '../api/projectMembershipsApi'
 import type { AuthSession } from '../types/auth'
 import type { Collaborator } from '../types/collaborator'
 import type { ProjectMember } from '../types/projectMembership'
 import { ProjectMembersPanel } from './ProjectMembersPanel'
+
+vi.mock('../api/projectMembershipsApi', () => ({
+  addProjectMember: vi.fn(),
+  removeProjectMember: vi.fn(),
+  updateProjectMemberRole: vi.fn(),
+}))
 
 const collaborators: Collaborator[] = [
   {
@@ -86,6 +104,10 @@ function createMember(
 }
 
 describe('ProjectMembersPanel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('shows read-only access to contributors', () => {
     render(
       <ProjectMembersPanel
@@ -185,4 +207,61 @@ describe('ProjectMembersPanel', () => {
         .getByRole('combobox'),
     ).toBeTruthy()
   })
+
+  it('shows a conflict message without repeating refresh instructions', async () => {
+    vi.mocked(updateProjectMemberRole)
+      .mockRejectedValue(
+        new ApiClientError(
+          409,
+          'Refresh and try again.',
+        ),
+      )
+
+    render(
+      <ProjectMembersPanel
+        projectId={7}
+        projectManagerId={1}
+        session={createSession(1)}
+        collaborators={collaborators}
+        members={[
+          createMember(1, 'OWNER'),
+          createMember(2, 'MANAGER'),
+          createMember(3, 'CONTRIBUTOR'),
+        ]}
+        onMembersChange={vi.fn()}
+      />,
+    )
+
+    const contributorCard = screen
+      .getByRole('heading', {
+        name: 'Contributor Member',
+      })
+      .closest('article')
+
+    expect(contributorCard).not.toBeNull()
+
+    fireEvent.change(
+      within(contributorCard as HTMLElement)
+        .getByRole('combobox'),
+      {
+        target: {
+          value: 'VIEWER',
+        },
+      },
+    )
+
+    fireEvent.click(
+      within(contributorCard as HTMLElement)
+        .getByRole('button', {
+          name: 'Save role',
+        }),
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('alert').textContent,
+      ).toBe('Refresh and try again.')
+    })
+  })
+
 })

@@ -82,7 +82,7 @@ function getErrorMessage(
 ): string {
   if (error instanceof ApiClientError) {
     if (error.status === 409) {
-      return `${error.message} Refresh the project and try again.`
+      return error.message
     }
 
     return error.message
