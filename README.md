@@ -121,7 +121,7 @@ A arquitetura de controlo de acesso está documentada em:
 - Object storage local com proteção contra caminhos inseguros e symlinks.
 - Provider e diretório do object storage configuráveis em runtime.
 - Backend validado com PostgreSQL real e `ddl-auto=validate`.
-- Suite backend validada em 29/07/2026 com 205 testes sem falhas.
+- Suite backend validada em 29/07/2026 com 215 testes sem falhas.
 
 ### Frontend React
 
@@ -153,8 +153,10 @@ A arquitetura de controlo de acesso está documentada em:
 
 ### Trabalho em curso
 
-- Foi identificado como follow-up do PR #39 um conjunto de testes HTTP de integração para movimentação de tarefas entre projetos.
-- Estes testes estão a ser preparados numa branch separada e devem confirmar também que operações recusadas não alteram parcialmente a tarefa persistida.
+- O follow-up do PR #39 foi implementado na branch `test/task-move-authorization-integration`.
+- Foram adicionados 10 testes HTTP de integração para movimentação de tarefas entre projetos.
+- Os testes confirmam códigos `400`, `403` e `404`, movimentações autorizadas e ausência de alterações parciais depois de operações recusadas.
+- A implementação está validada localmente e aguarda pull request e integração em `develop`.
 
 ### Trabalho ainda pendente
 
@@ -687,14 +689,14 @@ Set-Location ".\backend"
 Na validação realizada em 29/07/2026:
 
 ```text
-Tests run: 205
+Tests run: 215
 Failures: 0
 Errors: 0
 Skipped: 0
 BUILD SUCCESS
 ```
 
-A suite inclui testes de contexto, configuração, controllers, serviços, repositories, persistência, autenticação, autorização de projetos, autorização de tarefas, gestão de memberships, concorrência otimista, object storage e regras de domínio.
+A suite inclui testes de contexto, configuração, controllers, serviços, repositories, persistência, autenticação, autorização de projetos, autorização de tarefas, movimentação de tarefas entre projetos, gestão de memberships, concorrência otimista, object storage e regras de domínio.
 
 ### Frontend
 
