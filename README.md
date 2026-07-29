@@ -116,12 +116,13 @@ A arquitetura de controlo de acesso está documentada em:
 - Endpoints genéricos de memberships não criam, alteram nem removem `OWNER`.
 - Memberships removidas passam a `INACTIVE` e podem ser reativadas sem criar registos duplicados.
 - `project.managerId` é validado contra colaboradores ativos com membership ativa e papel elegível.
+- Transferência explícita e transacional de ownership com atualização coordenada das duas memberships e de `project.managerId`.
 - Duplicados, versões desatualizadas e conflitos de concorrência devolvem `409 Conflict`.
 - Fundação de documentos e attachments persistida na base de dados.
 - Object storage local com proteção contra caminhos inseguros e symlinks.
 - Provider e diretório do object storage configuráveis em runtime.
 - Backend validado com PostgreSQL real e `ddl-auto=validate`.
-- Suite backend validada em 29/07/2026 com 215 testes sem falhas.
+- Suite backend validada em 29/07/2026 com 236 testes sem falhas.
 
 ### Frontend React
 
@@ -153,16 +154,16 @@ A arquitetura de controlo de acesso está documentada em:
 
 ### Trabalho em curso
 
-- O follow-up do PR #39 foi implementado na branch `test/task-move-authorization-integration`.
-- Foram adicionados 10 testes HTTP de integração para movimentação de tarefas entre projetos.
-- Os testes confirmam códigos `400`, `403` e `404`, movimentações autorizadas e ausência de alterações parciais depois de operações recusadas.
-- A implementação está validada localmente e aguarda pull request e integração em `develop`.
+- A transferência explícita e transacional de ownership foi implementada na branch `feature/project-ownership-transfer`.
+- O endpoint `POST /api/projects/{projectId}/ownership-transfer` atualiza o novo `OWNER`, o antigo proprietário e `project.managerId` numa única transação.
+- A operação exige memberships ativas, colaborador ativo e versões atuais das duas memberships.
+- Foram adicionados 21 testes, incluindo serviço, controller, integração HTTP e permissões.
+- A implementação está validada localmente com 236 testes e aguarda pull request, review técnica e integração em `develop`.
 
 ### Trabalho ainda pendente
 
 - Criação, edição e eliminação de projetos e tarefas através do frontend.
 - Interface React para gestão de membros dos projetos.
-- Operação explícita e transacional de transferência de ownership.
 - Autorização de documentos e anexos através da mesma cadeia de acesso dos projetos e tarefas.
 - Proveniência de documentos e anexos, incluindo `createdById` e `uploadedById`.
 - Upload, download e eliminação de conteúdo de anexos através da API.
@@ -472,6 +473,7 @@ GET    /api/projects/{projectId}/members
 POST   /api/projects/{projectId}/members
 PATCH  /api/projects/{projectId}/members/{collaboratorId}
 DELETE /api/projects/{projectId}/members/{collaboratorId}
+POST   /api/projects/{projectId}/ownership-transfer
 ```
 
 Regras principais:
@@ -487,7 +489,10 @@ Regras principais:
 - `CONTRIBUTOR` e `VIEWER` não podem gerir memberships;
 - a remoção é lógica através do estado `INACTIVE`;
 - adicionar novamente um antigo membro reativa a membership existente;
-- a transferência de ownership exige futuramente uma operação explícita e transacional.
+- apenas o `OWNER` atual pode transferir ownership;
+- o destinatário deve ser colaborador ativo com membership `ACTIVE` no projeto;
+- o novo proprietário passa a `OWNER`, o anterior passa a `MANAGER` e `project.managerId` é atualizado na mesma transação;
+- versões desatualizadas e conflitos de concorrência devolvem `409 Conflict`.
 
 ### Tarefas
 
@@ -689,14 +694,14 @@ Set-Location ".\backend"
 Na validação realizada em 29/07/2026:
 
 ```text
-Tests run: 215
+Tests run: 236
 Failures: 0
 Errors: 0
 Skipped: 0
 BUILD SUCCESS
 ```
 
-A suite inclui testes de contexto, configuração, controllers, serviços, repositories, persistência, autenticação, autorização de projetos, autorização de tarefas, movimentação de tarefas entre projetos, gestão de memberships, concorrência otimista, object storage e regras de domínio.
+A suite inclui testes de contexto, configuração, controllers, serviços, repositories, persistência, autenticação, autorização de projetos, autorização de tarefas, movimentação de tarefas entre projetos, gestão de memberships, transferência de ownership, concorrência otimista, object storage e regras de domínio.
 
 ### Frontend
 

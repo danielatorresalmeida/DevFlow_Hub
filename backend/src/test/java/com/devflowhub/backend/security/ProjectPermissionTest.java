@@ -18,6 +18,7 @@ class ProjectPermissionTest {
                         ProjectPermission.CONTRIBUTE_TO_PROJECT,
                         ProjectPermission.MANAGE_PROJECT,
                         ProjectPermission.MANAGE_PROJECT_MEMBERS,
+                        ProjectPermission.TRANSFER_PROJECT_OWNERSHIP,
                         ProjectPermission.DELETE_PROJECT
                 );
     }
