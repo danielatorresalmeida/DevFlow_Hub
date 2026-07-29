@@ -1,14 +1,16 @@
 package com.devflowhub.backend.service;
 
 import com.devflowhub.backend.domain.DomainValues;
+import com.devflowhub.backend.domain.ProjectMembershipStatus;
 import com.devflowhub.backend.entity.Task;
 import com.devflowhub.backend.exception.InvalidOperationException;
-import com.devflowhub.backend.exception.ResourceNotFoundException;
+
 import com.devflowhub.backend.repository.CollaboratorRepository;
 import com.devflowhub.backend.repository.ProjectRepository;
 import com.devflowhub.backend.repository.TaskRepository;
+import com.devflowhub.backend.security.CurrentCollaboratorResolver;
+import com.devflowhub.backend.security.TaskAccessService;
 import com.devflowhub.backend.util.TextNormalizer;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,42 +28,88 @@ public class TaskService {
     private final ProjectRepository projectRepository;
     private final CollaboratorRepository collaboratorRepository;
     private final Clock clock;
+    private final CurrentCollaboratorResolver
+            currentCollaboratorResolver;
+    private final TaskAccessService taskAccessService;
 
     public TaskService(
             TaskRepository taskRepository,
             ProjectRepository projectRepository,
             CollaboratorRepository collaboratorRepository,
-            Clock clock
+            Clock clock,
+            CurrentCollaboratorResolver
+                    currentCollaboratorResolver,
+            TaskAccessService taskAccessService
     ) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
         this.collaboratorRepository = collaboratorRepository;
         this.clock = clock;
+        this.currentCollaboratorResolver =
+                currentCollaboratorResolver;
+        this.taskAccessService = taskAccessService;
     }
 
     public List<Task> findAll() {
-        return taskRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+        Long collaboratorId =
+                currentCollaboratorResolver
+                        .getRequiredId();
+
+        return taskRepository
+                .findAccessibleByCollaboratorIdAndStatus(
+                        collaboratorId,
+                        ProjectMembershipStatus.ACTIVE
+                );
     }
 
     public Optional<Task> findById(Long id) {
-        return taskRepository.findById(id);
+        return Optional.of(
+                taskAccessService
+                        .getRequiredForView(id)
+        );
     }
 
     public Task getRequired(Long id) {
-        return taskRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Task not found."));
+        return taskAccessService
+                .getRequiredForView(id);
     }
 
     public long count() {
-        return taskRepository.count();
+        Long collaboratorId =
+                currentCollaboratorResolver
+                        .getRequiredId();
+
+        return taskRepository
+                .countAccessibleByCollaboratorIdAndStatus(
+                        collaboratorId,
+                        ProjectMembershipStatus.ACTIVE
+                );
     }
 
     public long countByStatus(String status) {
-        return taskRepository.countByStatus(status);
+        Long collaboratorId =
+                currentCollaboratorResolver
+                        .getRequiredId();
+
+        return taskRepository
+                .countAccessibleByCollaboratorIdAndStatusAndTaskStatus(
+                        collaboratorId,
+                        ProjectMembershipStatus.ACTIVE,
+                        status
+                );
     }
 
     public long getStoredTimeSeconds() {
-        Long total = taskRepository.sumStoredTimeSeconds();
+        Long collaboratorId =
+                currentCollaboratorResolver
+                        .getRequiredId();
+
+        Long total = taskRepository
+                .sumAccessibleStoredTimeSecondsByCollaboratorIdAndStatus(
+                        collaboratorId,
+                        ProjectMembershipStatus.ACTIVE
+                );
+
         return total == null ? 0L : total;
     }
 
@@ -73,13 +121,21 @@ public class TaskService {
         task.setTimerStartedAt(null);
         task.setCreatedAt(null);
         task.setUpdatedAt(null);
+
+        taskAccessService.prepareForCreate(task);
         prepareAndValidate(task);
+
         return taskRepository.save(task);
     }
 
     @Transactional
     public Task update(Long id, Task updatedData) {
-        Task existing = getRequired(id);
+        Task existing = taskAccessService
+                .getRequiredAndPrepareForUpdate(
+                        id,
+                        updatedData
+                );
+
         prepareAndValidate(updatedData);
 
         existing.setTitle(updatedData.getTitle());
@@ -98,12 +154,16 @@ public class TaskService {
 
     @Transactional
     public void delete(Long id) {
-        taskRepository.delete(getRequired(id));
+        Task task = taskAccessService
+                .getRequiredForManagement(id);
+
+        taskRepository.delete(task);
     }
 
     @Transactional
     public Task complete(Long id) {
-        Task task = getRequired(id);
+        Task task = taskAccessService
+                .getRequiredForAssigneeAction(id);
 
         if (DomainValues.TaskStatus.COMPLETED.equals(task.getStatus())) {
             return task;
@@ -119,7 +179,9 @@ public class TaskService {
 
     @Transactional
     public Task startTimer(Long id) {
-        Task task = getRequired(id);
+        Task task = taskAccessService
+                .getRequiredForAssigneeAction(id);
+
         ensureTimerCanStart(task);
 
         if (!Boolean.TRUE.equals(task.getTimerActive())) {
@@ -133,7 +195,8 @@ public class TaskService {
 
     @Transactional
     public Task pauseTimer(Long id) {
-        Task task = getRequired(id);
+        Task task = taskAccessService
+                .getRequiredForAssigneeAction(id);
 
         if (!Boolean.TRUE.equals(task.getTimerActive()) || task.getTimerStartedAt() == null) {
             throw new InvalidOperationException("The timer is not active.");
@@ -152,7 +215,9 @@ public class TaskService {
     }
 
     public Long getTotalTime(Long id) {
-        Task task = getRequired(id);
+        Task task = taskAccessService
+                .getRequiredForView(id);
+
         long totalTime = safeTotal(task);
 
         if (Boolean.TRUE.equals(task.getTimerActive()) && task.getTimerStartedAt() != null) {
@@ -163,7 +228,8 @@ public class TaskService {
     }
 
     public Task getTimer(Long id) {
-        return getRequired(id);
+        return taskAccessService
+                .getRequiredForView(id);
     }
 
     private void prepareAndValidate(Task task) {
