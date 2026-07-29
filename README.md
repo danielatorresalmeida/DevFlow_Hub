@@ -1,6 +1,6 @@
 # DevFlow Hub
 
-DevFlow Hub é uma aplicação web académica para gestão de colaboradores, projetos, tarefas, tempo de trabalho e programas internos.
+DevFlow Hub é uma aplicação web académica para gestão de colaboradores, projetos, tarefas, tempo de trabalho, documentos e programas internos.
 
 ## Estado do repositório
 
@@ -14,6 +14,8 @@ Este repositório representa uma reorganização limpa e estruturada do projeto 
 
 As datas dos commits reorganizados representam a organização técnica do novo repositório e não substituem as datas reais registadas no `LOG.md`.
 
+O estado descrito neste README corresponde ao código integrado em `develop` até ao PR #40.
+
 ## Arquitetura atual
 
 ```text
@@ -23,13 +25,21 @@ React + TypeScript + Vite
           v
 Spring Boot REST API
           |
-          v
-PostgreSQL
+          +------------------+
+          |                  |
+          v                  v
+     PostgreSQL       Object storage local
 ```
 
-O frontend React é responsável pela interface, navegação, autenticação no cliente e apresentação dos dados. O backend Spring Boot é responsável pela segurança, regras de negócio, validação, persistência e respostas da API.
+O frontend React é responsável pela interface, navegação, autenticação no cliente e apresentação dos dados. O backend Spring Boot é responsável pela segurança, autorização, regras de negócio, validação, persistência, metadados documentais e respostas da API.
 
-A decisão arquitetural está documentada em [`docs/architecture/frontend-decision.md`](docs/architecture/frontend-decision.md).
+A decisão arquitetural do frontend está documentada em [`docs/architecture/frontend-decision.md`](docs/architecture/frontend-decision.md).
+
+A arquitetura de controlo de acesso está documentada em:
+
+- [`docs/architecture/project-access-control.md`](docs/architecture/project-access-control.md);
+- [`docs/architecture/project-access-permission-matrix.md`](docs/architecture/project-access-permission-matrix.md);
+- [`docs/architecture/project-access-endpoint-inventory.md`](docs/architecture/project-access-endpoint-inventory.md).
 
 ## Tecnologias utilizadas
 
@@ -48,23 +58,28 @@ A decisão arquitetural está documentada em [`docs/architecture/frontend-decisi
 - React 19
 - TypeScript 6
 - Vite 8
-- React Router 7
+- React Router 8.3.0
 - Fetch API nativa
 - ESLint
+- Vitest
+- React Testing Library
+- jsdom
 
-### Base de dados
+### Base de dados e armazenamento
 
 - PostgreSQL
 - H2 em memória para testes automatizados
+- Object storage local configurável através de uma abstração própria
 
-### Testes
+### Qualidade e automação
 
 - JUnit 5
 - Mockito
 - MockMvc
 - Spring Boot Test
 - Smoke tests em PowerShell com PostgreSQL real
-- ESLint e build TypeScript/Vite no frontend
+- GitHub Actions para backend e frontend
+- ESLint, Vitest e build TypeScript/Vite no frontend
 
 ## Estado atual
 
@@ -73,26 +88,46 @@ A decisão arquitetural está documentada em [`docs/architecture/frontend-decisi
 - Estrutura PostgreSQL criada e validada numa base limpa.
 - Scripts de instalação e migração disponíveis.
 - Entidades JPA, repositories e services implementados.
-- CRUD de colaboradores, projetos, tarefas e programas internos implementado.
+- CRUD de colaboradores, projetos, tarefas, documentos e programas internos implementado.
+- Consulta de metadata de anexos implementada.
 - Temporizador de tarefas com início, pausa, retoma, conclusão e acumulação de tempo.
 - Campos de auditoria das tarefas protegidos e geridos automaticamente.
 - Endpoint agregado `GET /api/dashboard` implementado.
-- Tratamento global de erros estruturados para HTTP `400`, `401` e `404`.
+- Tratamento global de erros estruturados para HTTP `400`, `401`, `403`, `404` e conflitos de integridade `409`.
 - JSON malformado rejeitado sem expor stack traces ou detalhes internos.
 - Autenticação JWT implementada.
 - Login público em `POST /api/auth/login`.
 - Restantes endpoints em `/api/**` protegidos com Bearer token.
-- Tokens com expiração de 900 segundos.
+- Tokens com expiração predefinida de 15 minutos.
 - Colaboradores inativos impedidos de iniciar sessão.
 - Alteração de palavra-passe associada ao colaborador autenticado através da claim `sub`.
+- Resolução central do colaborador autenticado através de `CurrentCollaboratorResolver`.
+- Persistência de memberships de projeto com os papéis `OWNER`, `MANAGER`, `CONTRIBUTOR` e `VIEWER`.
+- Apenas memberships `ACTIVE` concedem acesso ao projeto.
+- Listagem, consulta, atualização e eliminação de projetos protegidas por autorização de recurso.
+- Criação de projeto transacional com membership `OWNER` automática para o criador.
+- Listagem e consulta de tarefas filtradas pelo colaborador autenticado.
+- Tarefas independentes limitadas ao respetivo assignee.
+- Operações do temporizador limitadas ao assignee da tarefa.
+- Movimentação de tarefas valida o projeto atual, o projeto de destino e o assignee antes de persistir alterações.
+- Recursos inexistentes ou ocultos devolvem `404`; ações conhecidas mas não permitidas devolvem `403`.
+- API de gestão de memberships com listagem, adição, alteração de papel e remoção lógica de membros.
+- `OWNER` gere `MANAGER`, `CONTRIBUTOR` e `VIEWER`; `MANAGER` gere apenas `CONTRIBUTOR` e `VIEWER`.
+- Endpoints genéricos de memberships não criam, alteram nem removem `OWNER`.
+- Memberships removidas passam a `INACTIVE` e podem ser reativadas sem criar registos duplicados.
+- `project.managerId` é validado contra colaboradores ativos com membership ativa e papel elegível.
+- Duplicados, versões desatualizadas e conflitos de concorrência devolvem `409 Conflict`.
+- Fundação de documentos e attachments persistida na base de dados.
+- Object storage local com proteção contra caminhos inseguros e symlinks.
+- Provider e diretório do object storage configuráveis em runtime.
 - Backend validado com PostgreSQL real e `ddl-auto=validate`.
-- Suite backend validada com 38 testes sem falhas.
+- Suite backend validada em 29/07/2026 com 205 testes sem falhas.
 
 ### Frontend React
 
 - Fundação React, TypeScript e Vite implementada.
-- Rotas `/login`, `/dashboard`, `/projects`, `/tasks` e página de recurso não encontrado.
-- Rotas do dashboard, da lista de projetos e da lista de tarefas protegidas.
+- Rotas `/login`, `/dashboard`, `/projects`, `/projects/:projectId`, `/tasks`, `/tasks/:taskId` e página de recurso não encontrado.
+- Rotas autenticadas protegidas.
 - Integração real com `POST /api/auth/login`.
 - Sessão autenticada guardada em `sessionStorage`.
 - Persistência da sessão após atualização da página.
@@ -100,33 +135,38 @@ A decisão arquitetural está documentada em [`docs/architecture/frontend-decisi
 - Cabeçalho `Authorization: Bearer <token>` aplicado aos pedidos autenticados.
 - Tratamento global de respostas `401`, limpeza da sessão e redirecionamento para `/login`.
 - Dashboard autenticado ligado a `GET /api/dashboard`.
-- Indicadores reais de colaboradores, projetos, tarefas, programas e tempo registado.
-- Distribuição de tarefas por estado.
-- Apresentação de tarefas recentes e projetos com prazos próximos.
-- Estados de carregamento, erro, repetição do pedido e ausência de dados.
-- Interface responsiva.
+- Indicadores, distribuição de tarefas, tarefas recentes e projetos com prazos próximos.
 - Cabeçalho autenticado reutilizável com identidade do utilizador, navegação e logout.
-- Navegação entre Dashboard, Projects e Tasks através de React Router.
 - Lista autenticada de projetos ligada a `GET /api/projects`.
-- Dados dos gestores obtidos através de `GET /api/collaborators`.
-- Projetos apresentados com estado, descrição, gestor e datas.
-- Estados de carregamento, erro, repetição do pedido e lista vazia na página de projetos.
+- Página de detalhe de projeto ligada a `GET /api/projects/{id}`.
+- Apresentação das tarefas associadas ao projeto.
 - Lista autenticada de tarefas ligada a `GET /api/tasks`.
-- Projetos e responsáveis das tarefas resolvidos através de `GET /api/projects` e `GET /api/collaborators`.
-- Tarefas apresentadas com estado, prioridade, projeto, responsável, tempo registado e datas de auditoria.
-- Indicação do número de temporizadores ativos e preparação da atualização visual do tempo quando um temporizador estiver em execução.
-- Estados de carregamento, erro, repetição do pedido e lista vazia na página de tarefas.
-- Layout validado em desktop e numa viewport móvel de `390 × 844`.
-- `npm run lint` e `npm run build` validados com sucesso.
+- Página de detalhe de tarefa ligada a `GET /api/tasks/{id}`.
+- Apresentação do projeto, responsável, estado, prioridade, datas e tempo registado.
+- Início, pausa, retoma e conclusão do temporizador através da interface.
+- Atualização visual do tempo durante uma sessão ativa.
+- Estados de carregamento, erro, retry, recurso inexistente e ausência de dados.
+- Interface responsiva validada em desktop e numa viewport móvel de `390 × 844`.
+- Testes automatizados de armazenamento da autenticação, rotas protegidas e configuração de rotas.
+- `npm run lint`, `npm test` e `npm run build` validados com sucesso.
+- Suite frontend validada em 29/07/2026 com 16 testes em 3 ficheiros.
+
+### Trabalho em curso
+
+- Foi identificado como follow-up do PR #39 um conjunto de testes HTTP de integração para movimentação de tarefas entre projetos.
+- Estes testes estão a ser preparados numa branch separada e devem confirmar também que operações recusadas não alteram parcialmente a tarefa persistida.
 
 ### Trabalho ainda pendente
 
-- Página de detalhe de projeto, incluindo tarefas e documentação associada.
-- Página de detalhe de tarefa e listas ou páginas de detalhe para colaboradores e programas internos.
-- Criação, edição e eliminação de recursos através do frontend.
-- Controlo do temporizador através da interface React.
+- Criação, edição e eliminação de projetos e tarefas através do frontend.
+- Interface React para gestão de membros dos projetos.
+- Operação explícita e transacional de transferência de ownership.
+- Autorização de documentos e anexos através da mesma cadeia de acesso dos projetos e tarefas.
+- Proveniência de documentos e anexos, incluindo `createdById` e `uploadedById`.
+- Upload, download e eliminação de conteúdo de anexos através da API.
 - Interface de alteração e redefinição segura de palavra-passe.
-- Testes automatizados de componentes e fluxos do frontend.
+- Política administrativa global separada para colaboradores e programas internos.
+- Ajuste do dashboard para distinguir métricas pessoais de métricas globais.
 - Testes Maven de integração com uma instância PostgreSQL dedicada.
 - Revisão da estratégia de armazenamento e renovação do token antes de produção.
 - Validação do JAR final e do frontend compilado numa instalação independente.
@@ -135,6 +175,8 @@ A decisão arquitetural está documentada em [`docs/architecture/frontend-decisi
 
 ```text
 DevFlow_Hub/
+├── .github/
+│   └── workflows/
 ├── backend/
 │   └── src/
 ├── database/
@@ -153,9 +195,19 @@ DevFlow_Hub/
 └── README.md
 ```
 
+As pastas geradas `backend/target`, `frontend/node_modules` e `frontend/dist`, assim como ficheiros locais `.env.local`, permanecem fora do Git e não devem ser incluídas numa entrega limpa.
+
 ## Base de dados
 
-O DevFlow Hub utiliza PostgreSQL para persistir colaboradores, projetos, tarefas e programas internos.
+O DevFlow Hub utiliza PostgreSQL para persistir:
+
+- colaboradores;
+- projetos;
+- memberships de projeto;
+- tarefas;
+- documentos;
+- metadata de anexos;
+- programas internos.
 
 Os ficheiros principais encontram-se em:
 
@@ -180,7 +232,8 @@ database/
 - 4 projetos;
 - 5 tarefas;
 - 4 programas internos;
-- foreign keys entre projetos, tarefas, programas e colaboradores.
+- foreign keys entre projetos, tarefas, programas e colaboradores;
+- constraints e índices para memberships, documentos e attachments.
 
 As instruções completas estão em [`database/INSTALACAO_BASE_DADOS_LOCAL.txt`](database/INSTALACAO_BASE_DADOS_LOCAL.txt).
 
@@ -199,20 +252,22 @@ backend/src/main/java/com/devflowhub/backend/
 ├── repository/
 ├── security/
 ├── service/
+├── storage/
 └── util/
 ```
 
 ### Responsabilidades
 
-- `config`: configurações técnicas, segurança e JWT;
+- `config`: configurações técnicas, segurança, JWT e object storage;
 - `controller`: endpoints REST;
-- `domain`: estados, prioridades e valores permitidos;
+- `domain`: estados, prioridades, papéis e valores permitidos;
 - `dto`: pedidos e respostas da API;
 - `entity`: entidades JPA;
 - `exception`: exceções e tratamento global de erros;
-- `repository`: acesso aos dados;
-- `security`: integração da autenticação JWT com Spring Security;
+- `repository`: acesso aos dados e queries filtradas por autorização;
+- `security`: autenticação JWT e autorização de recursos;
 - `service`: regras de negócio e consultas agregadas;
+- `storage`: contratos e providers de armazenamento de objetos;
 - `util`: funções comuns de normalização.
 
 ## Configuração do backend
@@ -227,6 +282,8 @@ SHOW_SQL
 JWT_SECRET
 JWT_ISSUER
 JWT_EXPIRATION
+OBJECT_STORAGE_PROVIDER
+OBJECT_STORAGE_LOCAL_ROOT_DIRECTORY
 PORT
 ```
 
@@ -237,13 +294,17 @@ $env:DB_URL = "jdbc:postgresql://localhost:5432/devflow_hub"
 $env:DB_USERNAME = "postgres"
 $env:DB_PASSWORD = "<palavra-passe-local-do-postgresql>"
 $env:SHOW_SQL = "false"
-$env:JWT_SECRET = "<segredo-de-desenvolvimento-com-comprimento-suficiente>"
+$env:JWT_SECRET = "<segredo-base64-com-pelo-menos-32-bytes-depois-da-descodificacao>"
 $env:JWT_ISSUER = "https://devflow-hub.local"
 $env:JWT_EXPIRATION = "PT15M"
+$env:OBJECT_STORAGE_PROVIDER = "local"
+$env:OBJECT_STORAGE_LOCAL_ROOT_DIRECTORY = ".\data\object-storage"
 $env:PORT = "8080"
 ```
 
-Credenciais, palavras-passe e segredos não devem ser guardados no Git.
+`JWT_SECRET` deve ser Base64 válido e conter pelo menos 32 bytes depois da descodificação.
+
+Credenciais, palavras-passe, segredos e configurações locais não devem ser guardados no Git.
 
 ### Compilar e testar
 
@@ -284,7 +345,7 @@ O frontend possui documentação adicional em [`frontend/README.md`](frontend/RE
 
 ### Pré-requisitos
 
-- Node.js compatível com Vite 8;
+- Node.js `>=22.22.0`;
 - npm;
 - backend em execução na porta `8080` para testar a aplicação completa.
 
@@ -293,6 +354,12 @@ O frontend possui documentação adicional em [`frontend/README.md`](frontend/RE
 ```powershell
 Set-Location ".\frontend"
 npm install
+```
+
+Em CI e em instalações reproduzíveis com `package-lock.json`, utilizar:
+
+```powershell
+npm ci
 ```
 
 ### Configuração da API
@@ -311,7 +378,7 @@ Para um backend alojado noutra origem, cria `frontend/.env.local` e define, por 
 VITE_API_BASE_URL=https://api.exemplo.com
 ```
 
-O ficheiro `.env.local` é local e não deve ser enviado para o repositório.
+O ficheiro `.env.local` é local e não deve ser enviado para o repositório nem incluído numa entrega partilhada.
 
 ### Iniciar o frontend
 
@@ -330,6 +397,7 @@ http://localhost:5173
 
 ```powershell
 npm run lint
+npm test
 npm run build
 ```
 
@@ -388,6 +456,8 @@ PUT    /api/collaborators/{id}
 DELETE /api/collaborators/{id}
 ```
 
+Estes endpoints estão autenticados, mas ainda necessitam de uma política administrativa global separada dos papéis de projeto.
+
 ### Projetos
 
 ```text
@@ -396,7 +466,26 @@ GET    /api/projects/{id}
 POST   /api/projects
 PUT    /api/projects/{id}
 DELETE /api/projects/{id}
+GET    /api/projects/{projectId}/members
+POST   /api/projects/{projectId}/members
+PATCH  /api/projects/{projectId}/members/{collaboratorId}
+DELETE /api/projects/{projectId}/members/{collaboratorId}
 ```
+
+Regras principais:
+
+- `GET /api/projects` devolve apenas projetos com membership ativa do utilizador;
+- qualquer membro ativo pode consultar um projeto;
+- `OWNER` e `MANAGER` podem atualizar o projeto;
+- apenas `OWNER` pode eliminar o projeto;
+- o criador torna-se `OWNER` e manager inicial numa única transação;
+- todos os membros ativos podem consultar a lista de memberships;
+- `OWNER` pode gerir `MANAGER`, `CONTRIBUTOR` e `VIEWER`;
+- `MANAGER` pode gerir apenas `CONTRIBUTOR` e `VIEWER`;
+- `CONTRIBUTOR` e `VIEWER` não podem gerir memberships;
+- a remoção é lógica através do estado `INACTIVE`;
+- adicionar novamente um antigo membro reativa a membership existente;
+- a transferência de ownership exige futuramente uma operação explícita e transacional.
 
 ### Tarefas
 
@@ -414,6 +503,37 @@ GET    /api/tasks/{id}/timer
 POST   /api/tasks/{id}/complete
 ```
 
+Regras principais:
+
+- as listagens são filtradas no backend;
+- tarefas de projeto seguem a membership e o papel do utilizador;
+- tarefas sem projeto são privadas do assignee;
+- ações do temporizador pertencem ao assignee;
+- alterações de projeto validam o parent atual e o parent de destino antes do save;
+- um assignee de tarefa de projeto deve ser membro ativo do projeto.
+
+### Documentos
+
+```text
+GET    /api/documents/{id}
+GET    /api/projects/{projectId}/documents
+GET    /api/tasks/{taskId}/documents
+POST   /api/documents
+PUT    /api/documents/{id}
+DELETE /api/documents/{id}
+```
+
+Os endpoints e a persistência estão implementados. A autorização específica de documentos e a proveniência do criador continuam pendentes.
+
+### Anexos
+
+```text
+GET /api/attachments/{id}
+GET /api/documents/{documentId}/attachments
+```
+
+A API atual expõe apenas metadata. Upload, download e eliminação de conteúdo ainda não estão disponíveis por HTTP.
+
 ### Programas internos
 
 ```text
@@ -424,6 +544,8 @@ PUT    /api/internal-programs/{id}
 DELETE /api/internal-programs/{id}
 ```
 
+Tal como os colaboradores, os programas internos ainda necessitam de uma política administrativa global própria.
+
 ### Dashboard
 
 ```text
@@ -432,11 +554,16 @@ GET /api/dashboard
 
 A resposta inclui:
 
-- totais de colaboradores, projetos, tarefas e programas;
-- contagem de tarefas por estado;
-- tempo total registado;
-- tarefas recentes;
-- projetos com prazos futuros.
+- total de colaboradores;
+- projetos acessíveis ao utilizador;
+- tarefas acessíveis ao utilizador;
+- total de programas internos;
+- contagem das tarefas acessíveis por estado;
+- tempo total registado nas tarefas acessíveis;
+- tarefas recentes acessíveis;
+- projetos acessíveis com prazos futuros.
+
+Os valores de colaboradores e programas continuam globais. Esta diferença deve ser resolvida quando for introduzida a autorização administrativa global.
 
 ## Detalhe de projetos no frontend
 
@@ -459,7 +586,7 @@ A página:
 - mantém a sessão e a navegação autenticadas;
 - possui layout responsivo para desktop e dispositivos móveis.
 
-A filtragem das tarefas é atualmente realizada no frontend porque a API ainda não possui um endpoint específico como `GET /api/projects/{id}/tasks`.
+A filtragem das tarefas associadas é realizada no frontend sobre uma lista que já foi filtrada pelo backend de acordo com o acesso do utilizador.
 
 ## Detalhe de tarefas e temporizador no frontend
 
@@ -496,11 +623,16 @@ Durante estas operações:
 
 - os botões ficam temporariamente desativados;
 - são apresentados estados de processamento;
-- são apresentadas mensagens de sucesso ou erro;
+- são apresentadas mensagens de sucesso e erro;
 - a conclusão exige confirmação;
 - o tempo da sessão ativa é acumulado ao concluir;
 - uma tarefa concluída não pode reiniciar o temporizador.
-## Segurança e sessão do frontend
+
+O backend pode recusar uma ação apresentada pela interface quando o utilizador não é o assignee. Uma melhoria futura deve ocultar ou desativar estas ações através de capabilities devolvidas pela API.
+
+## Segurança e autorização
+
+### Sessão do frontend
 
 A implementação atual guarda a sessão JWT em `sessionStorage` e calcula localmente a data de expiração com base no campo `expiresIn`.
 
@@ -513,17 +645,33 @@ A sessão é eliminada quando:
 
 Esta solução é adequada para a fase académica atual. Antes de uma utilização de produção, deve ser revista a estratégia de armazenamento do token, mitigação de XSS, renovação de sessão e eventual utilização de cookies `HttpOnly`, `Secure` e `SameSite`.
 
+### Autorização de projetos e tarefas
+
+A autenticação identifica o colaborador. A autorização determina se esse colaborador pode aceder a um recurso específico.
+
+A membership ativa do projeto é a fonte de verdade. O campo profissional `Collaborator.role` não é utilizado como papel de autorização do projeto.
+
+A matriz atual é resumida da seguinte forma:
+
+| Papel | Ver projeto | Contribuir | Gerir projeto | Eliminar projeto |
+|---|---:|---:|---:|---:|
+| `OWNER` | Sim | Sim | Sim | Sim |
+| `MANAGER` | Sim | Sim | Sim | Não |
+| `CONTRIBUTOR` | Sim | Sim | Não | Não |
+| `VIEWER` | Sim | Não | Não | Não |
+
+As regras mais específicas das tarefas encontram-se centralizadas em `TaskAccessService`.
+
 ## Tratamento de erros
 
 A API possui tratamento estruturado para:
 
-- recursos não encontrados;
-- operações inválidas;
-- credenciais inválidas;
-- pedidos não autenticados;
-- erros de validação;
-- JSON malformado;
-- erros inesperados da aplicação.
+- `400 Bad Request`: validação, JSON inválido e operações incompatíveis com as regras de negócio;
+- `401 Unauthorized`: token ausente ou inválido, colaborador inexistente ou inativo;
+- `403 Forbidden`: recurso conhecido, mas operação não permitida pelo papel ativo;
+- `404 Not Found`: recurso inexistente ou oculto para evitar divulgação da sua existência;
+- `409 Conflict`: registo duplicado, versão desatualizada ou conflito de concorrência;
+- erros inesperados da aplicação sem exposição de detalhes internos.
 
 As respostas não expõem stack traces, hashes de palavras-passe nem detalhes internos.
 
@@ -536,25 +684,60 @@ Set-Location ".\backend"
 .\mvnw.cmd clean test
 ```
 
-Na validação realizada em 23/07/2026:
+Na validação realizada em 29/07/2026:
 
 ```text
-Tests run: 38
+Tests run: 205
 Failures: 0
 Errors: 0
 Skipped: 0
 BUILD SUCCESS
 ```
 
+A suite inclui testes de contexto, configuração, controllers, serviços, repositories, persistência, autenticação, autorização de projetos, autorização de tarefas, gestão de memberships, concorrência otimista, object storage e regras de domínio.
+
 ### Frontend
 
 ```powershell
 Set-Location ".\frontend"
 npm run lint
+npm test
 npm run build
 ```
 
-Na validação realizada em 24/07/2026, ambos os comandos terminaram com sucesso.
+Na validação realizada em 29/07/2026:
+
+```text
+Test Files: 3 passed
+Tests: 16 passed
+Lint: aprovado
+Build: aprovado
+```
+
+## Validação automática no GitHub
+
+O workflow encontra-se em:
+
+```text
+.github/workflows/build-validation.yml
+```
+
+É executado em pull requests para `develop`, pushes para `develop` e manualmente através de `workflow_dispatch`.
+
+O job do backend executa:
+
+```text
+./mvnw --batch-mode clean verify
+```
+
+O job do frontend executa:
+
+```text
+npm ci
+npm run lint
+npm run test
+npm run build
+```
 
 ## Smoke tests da API com PostgreSQL
 
@@ -590,6 +773,20 @@ powershell.exe `
     -File ".\scripts\smoke-test-api.ps1" `
     -BaseUrl "http://localhost:8080"
 ```
+
+## Entrega limpa
+
+Para preparar um ZIP de código-fonte, não incluir:
+
+```text
+.git/
+backend/target/
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+```
+
+Uma opção segura é criar a entrega a partir de um clone limpo ou utilizar `git archive` para os ficheiros versionados.
 
 ## Estratégia de branches
 

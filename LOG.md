@@ -1749,3 +1749,474 @@ Foram confirmados:
 ### Próxima etapa
 
 Rever o diff completo, criar o commit da branch `feature/frontend-task-detail` e abrir um pull request para `develop`.
+
+---
+
+## Marco 19 - 25/07/2026 a 26/07/2026 - Fundação de documentos e metadata de anexos
+
+### Objetivo
+
+Adicionar ao domínio uma base persistente para documentação associada a projetos e tarefas, preparando a futura integração de ficheiros sem misturar metadata com conteúdo binário.
+
+### Funcionalidades implementadas
+
+- criação da entidade `Document`;
+- criação da entidade `Attachment`;
+- associação de cada documento a exatamente um projeto ou uma tarefa;
+- associação dos attachments ao respetivo documento;
+- inclusão de campos de auditoria e metadata de ficheiros;
+- criação dos repositories e services de documentos e attachments;
+- criação do `DocumentController`;
+- criação do `AttachmentController`;
+- implementação do CRUD de documentos;
+- implementação das consultas de documentos por projeto e por tarefa;
+- implementação das consultas de metadata de attachments;
+- criação do DTO `AttachmentMetadataResponse`;
+- adição das alterações necessárias aos scripts PostgreSQL e às migrações;
+- criação de testes de controller, service, persistência e campos de auditoria.
+
+### Endpoints adicionados
+
+```text
+GET    /api/documents/{id}
+GET    /api/projects/{projectId}/documents
+GET    /api/tasks/{taskId}/documents
+POST   /api/documents
+PUT    /api/documents/{id}
+DELETE /api/documents/{id}
+GET    /api/attachments/{id}
+GET    /api/documents/{documentId}/attachments
+```
+
+### Decisões de implementação
+
+O conteúdo dos ficheiros não foi guardado diretamente na base de dados. A tabela de attachments conserva apenas a metadata necessária para relacionar o registo com um provider de object storage.
+
+A API desta fase disponibiliza apenas metadata de attachments. Upload, download e eliminação de conteúdo ficaram deliberadamente fora do escopo até existir uma camada de armazenamento e autorização adequada.
+
+### Validação
+
+- persistência de documentos e attachments validada com H2;
+- constraints de associação validadas;
+- campos de auditoria validados;
+- testes de services e controllers concluídos sem falhas;
+- PR #20 integrado em `develop`.
+
+### Trabalho pendente
+
+- implementar object storage;
+- adicionar upload e download HTTP;
+- registar o autor do documento e o utilizador que fez o upload;
+- aplicar autorização através do projeto ou tarefa parent;
+- integrar documentos e attachments no frontend.
+
+### Próxima etapa
+
+Melhorar a instalação do projeto, automatizar a validação no GitHub e preparar uma abstração segura para armazenamento de ficheiros.
+
+---
+
+## Marco 20 - 27/07/2026 - Configuração, CI e testes automatizados do frontend
+
+### Objetivo
+
+Melhorar a reprodutibilidade do projeto, remover dependências não utilizadas, automatizar a validação dos pull requests e criar uma primeira suite de testes do frontend.
+
+### Funcionalidades e melhorias implementadas
+
+- atualização da documentação das variáveis de ambiente;
+- esclarecimento da arquitetura React e Spring Boot;
+- remoção da dependência Thymeleaf, que já não fazia parte da arquitetura atual;
+- criação do workflow `.github/workflows/build-validation.yml`;
+- validação automática de pull requests e pushes para `develop`;
+- configuração do Java 21 e cache Maven no job do backend;
+- execução de `clean verify` no backend;
+- configuração do Node.js 22 e instalação com `npm ci` no frontend;
+- execução de lint, testes e build no frontend;
+- atualização do React Router para `8.3.0`;
+- criação da infraestrutura Vitest, React Testing Library e jsdom;
+- criação de testes para armazenamento da autenticação;
+- criação de testes para `ProtectedRoute`;
+- criação de testes para a configuração principal das rotas.
+
+### Testes do frontend adicionados
+
+```text
+frontend/src/auth/authStorage.test.ts
+frontend/src/routes/ProtectedRoute.test.tsx
+frontend/src/routes/AppRoutes.test.tsx
+```
+
+### Validação
+
+- `npm run lint`: sucesso;
+- `npm test`: 16 testes aprovados em 3 ficheiros;
+- `npm run build`: sucesso;
+- workflow de GitHub Actions validado;
+- PRs #22, #23, #24, #28 e #29 integrados em `develop`.
+
+### Decisões de implementação
+
+O workflow utiliza `npm ci` para respeitar exatamente o `package-lock.json` e reduzir diferenças entre ambientes.
+
+Os testes iniciais concentram-se nas áreas com maior impacto transversal: persistência da sessão, proteção de rotas, redirecionamentos e configuração das rotas principais.
+
+### Trabalho pendente
+
+- aumentar a cobertura das páginas e clientes de API;
+- adicionar testes das ações do temporizador no frontend;
+- adicionar testes com PostgreSQL real no pipeline;
+- validar artefactos finais numa instalação independente.
+
+### Próxima etapa
+
+Criar a fundação persistente do controlo de acesso a projetos e a abstração do object storage.
+
+---
+
+## Marco 21 - 27/07/2026 - Fundação de memberships e object storage
+
+### Objetivo
+
+Criar as duas fundações necessárias para a próxima fase do sistema: memberships de projeto para autorização por recurso e uma abstração segura para armazenamento de ficheiros.
+
+### Fundação de memberships
+
+- criação da entidade `ProjectMembership`;
+- criação dos papéis `OWNER`, `MANAGER`, `CONTRIBUTOR` e `VIEWER`;
+- criação dos estados `ACTIVE` e `INACTIVE`;
+- ligação entre projeto e colaborador através de identificadores persistidos;
+- adição de `@Version` para concorrência otimista;
+- adição de timestamps de criação e atualização;
+- criação de uma restrição única para o par projeto e colaborador;
+- criação do repository de memberships;
+- atualização dos scripts e migrações PostgreSQL;
+- criação de testes de persistência e constraints.
+
+### Fundação de object storage
+
+- criação do contrato `ObjectStorage`;
+- criação dos modelos de pedidos e respostas do storage;
+- implementação do provider local;
+- validação e normalização das chaves de objetos;
+- proteção contra traversal de diretórios;
+- proteção contra symlinks;
+- escrita através de ficheiro temporário antes da substituição final;
+- criação de testes de contrato reutilizáveis;
+- validação de escrita, leitura, substituição, eliminação e falhas de streams.
+
+### Decisões de implementação
+
+A membership passou a ser preparada como fonte de verdade para acesso ao projeto. O campo profissional `Collaborator.role` não deve ser reutilizado como papel de autorização.
+
+O object storage foi definido através de uma interface para permitir a substituição futura do provider local por um serviço externo sem alterar os services de domínio.
+
+### Validação
+
+- unicidade de memberships validada na base de dados;
+- concorrência otimista preparada através do campo `version`;
+- testes de contrato do provider local aprovados;
+- proteção de caminhos e symlinks validada;
+- PRs #30 e #31 integrados em `develop`.
+
+### Trabalho pendente
+
+- resolver o colaborador atual a partir do JWT;
+- definir a matriz de permissões;
+- aplicar memberships aos endpoints de projetos e tarefas;
+- configurar o provider de storage em runtime;
+- ligar attachments ao object storage.
+
+### Próxima etapa
+
+Criar uma fundação central de autorização e documentar formalmente a matriz de acesso.
+
+---
+
+## Marco 22 - 28/07/2026 - Arquitetura central de autorização de projetos
+
+### Objetivo
+
+Separar autenticação de autorização e criar uma base central para verificar o acesso do colaborador autenticado a cada projeto.
+
+### Funcionalidades implementadas
+
+- criação do `CurrentCollaboratorResolver`;
+- resolução do colaborador através da claim JWT `sub`;
+- rejeição de colaboradores inexistentes ou inativos;
+- criação do enum `ProjectPermission`;
+- criação do `ProjectAccessService`;
+- verificação de memberships ativas;
+- distinção entre recursos ocultos e operações não permitidas;
+- introdução de `ProjectAccessDeniedException`;
+- criação de testes unitários para o resolver, permissões e serviço de acesso;
+- correção da resolução do identificador do colaborador autenticado;
+- configuração do Mockito como Java agent para Java 21;
+- correção de um teste do object storage para não depender do tamanho do buffer.
+
+### Documentação criada
+
+```text
+docs/architecture/project-access-control.md
+docs/architecture/project-access-permission-matrix.md
+docs/architecture/project-access-endpoint-inventory.md
+```
+
+### Semântica HTTP definida
+
+- `401 Unauthorized` para autenticação ausente, inválida ou associada a colaborador inativo;
+- `404 Not Found` para recurso inexistente ou oculto ao utilizador;
+- `403 Forbidden` quando o utilizador pode conhecer o recurso, mas o papel não permite a operação.
+
+### Decisões de arquitetura
+
+A autorização é aplicada nos services e não apenas nos controllers. Desta forma, chamadas futuras provenientes de jobs, integrações ou outros controllers continuam protegidas.
+
+As operações que movem um recurso devem autorizar primeiro o parent atual e depois o parent de destino. Nenhuma mutação deve ser persistida antes de todas as verificações passarem.
+
+### Validação
+
+- testes do `CurrentCollaboratorResolver`: aprovados;
+- testes do `ProjectPermission`: aprovados;
+- testes do `ProjectAccessService`: aprovados;
+- documentação revista e integrada;
+- PRs #32, #33, #34 e #35 integrados em `develop`.
+
+### Trabalho pendente
+
+- aplicar a autorização às operações existentes de projetos;
+- criar automaticamente a membership do criador;
+- aplicar a mesma arquitetura às tarefas;
+- definir políticas para documentos, attachments e recursos globais.
+
+### Próxima etapa
+
+Aplicar a autorização central aos endpoints existentes e configurar o object storage para execução real.
+
+---
+
+## Marco 23 - 28/07/2026 - Enforcement de projetos, configuração do storage e ownership automático
+
+### Objetivo
+
+Transformar as fundações anteriores em comportamento real da API, protegendo os projetos existentes, configurando o provider de storage e estabelecendo ownership na criação de projetos.
+
+### Controlo de acesso a projetos
+
+- listagem de projetos filtrada por memberships ativas;
+- consulta de projeto protegida por `VIEW_PROJECT`;
+- atualização protegida por `MANAGE_PROJECT`;
+- eliminação protegida por `DELETE_PROJECT`;
+- ocultação consistente de projetos sem membership através de `404`;
+- resposta `403` quando existe membership mas o papel é insuficiente;
+- criação de queries de repository específicas para acesso e contagem;
+- atualização dos testes de service e repository.
+
+### Configuração do object storage
+
+- criação de propriedades de configuração para o provider;
+- suporte inicial para o provider `local`;
+- configuração do diretório raiz através de variável de ambiente;
+- falha rápida quando o provider ou diretório obrigatório é inválido;
+- definição dos defaults de desenvolvimento;
+- criação de testes da configuração do Spring.
+
+### Ownership automático na criação
+
+- qualquer colaborador autenticado e ativo pode criar um projeto;
+- o criador torna-se manager inicial;
+- o criador recebe uma membership `OWNER` ativa;
+- o projeto e a membership são criados na mesma transação;
+- um `managerId` diferente do criador é rejeitado;
+- uma falha ao criar a membership provoca rollback do projeto.
+
+### Validação
+
+- queries de projetos acessíveis validadas com persistência H2;
+- matriz de permissões exercida em testes;
+- configuração do storage validada;
+- criação transacional e rollback validados;
+- PRs #36, #37 e #38 integrados em `develop`.
+
+### Trabalho pendente
+
+- proteger tarefas e os respetivos temporizadores;
+- criar endpoints de gestão de memberships;
+- validar a consistência futura entre `managerId` e memberships;
+- aplicar autorização a documentos e attachments.
+
+### Próxima etapa
+
+Implementar o controlo de acesso de tarefas, incluindo tarefas independentes, reassignment e movimentação entre projetos.
+
+---
+
+## Marco 24 - 29/07/2026 - Controlo de acesso de tarefas
+
+### Objetivo
+
+Aplicar autorização completa às tarefas, impedindo acesso por manipulação de identificadores e preservando as regras pessoais do temporizador.
+
+### Funcionalidades implementadas
+
+- criação do `TaskAccessService`;
+- listagem de tarefas filtrada no repository;
+- consulta de tarefas protegida;
+- criação de tarefas de projeto sujeita a permissão de contribuição;
+- criação de tarefas independentes limitada ao próprio colaborador;
+- tarefas independentes privadas do assignee;
+- atualização e eliminação sujeitas ao papel e ownership aplicáveis;
+- autorização do parent atual antes da validação do parent de destino;
+- autorização separada do projeto de destino;
+- validação de memberships do assignee no projeto de destino;
+- restrições de reassignment para contributors;
+- ações de início, pausa, retoma e conclusão limitadas ao assignee;
+- consulta do tempo e estado do temporizador protegida pela visibilidade da tarefa;
+- ocultação de tarefas inacessíveis através de `404`;
+- resposta `403` para ações conhecidas mas não permitidas;
+- proteção contra alterações parciais antes da conclusão das verificações.
+
+### Testes adicionados e atualizados
+
+- 38 testes específicos de `TaskAccessService`;
+- testes de queries de acesso no `TaskRepository`;
+- atualização extensa dos testes de `TaskService`;
+- atualização dos testes do `TaskController`;
+- atualização dos testes HTTP de segurança.
+
+### Validação
+
+Na baseline executada após o merge:
+
+```text
+Tests run: 171
+Failures: 0
+Errors: 0
+Skipped: 0
+BUILD SUCCESS
+```
+
+O frontend foi igualmente validado:
+
+```text
+Test Files: 3 passed
+Tests: 16 passed
+Lint: aprovado
+Build: aprovado
+```
+
+### Review e merge
+
+- PR #39 aprovado;
+- review confirmou a distinção entre `404` e `403`;
+- review confirmou a ordem das verificações na movimentação entre projetos;
+- review confirmou a validação do assignee no destino;
+- PR #39 integrado em `develop`;
+- branch local e remota da funcionalidade eliminadas depois do merge.
+
+### Follow-up identificado
+
+Foi recomendada cobertura HTTP de integração adicional para movimentação de tarefas entre projetos, incluindo validação do estado persistido depois de operações recusadas.
+
+### Próxima etapa
+
+Implementar a gestão de memberships dos projetos sem misturar ainda frontend, documentos ou autorização administrativa global.
+
+---
+
+## Marco 25 - 29/07/2026 - Gestão de memberships dos projetos. PR #40
+
+### Estado
+
+Implementação concluída na branch `feature/project-membership-management` e publicada no commit:
+
+```text
+84c391c feat: add project membership management
+```
+
+O PR #40 foi aprovado e integrado em `develop` depois de review técnica.
+
+### Objetivo
+
+Disponibilizar uma API segura para consultar e gerir membros dos projetos, protegendo ownership, hierarquia de papéis, consistência do manager e concorrência.
+
+### Endpoints implementados
+
+```text
+GET    /api/projects/{projectId}/members
+POST   /api/projects/{projectId}/members
+PATCH  /api/projects/{projectId}/members/{collaboratorId}
+DELETE /api/projects/{projectId}/members/{collaboratorId}
+```
+
+### Funcionalidades implementadas
+
+- criação do `ProjectMembershipController`;
+- criação do `ProjectMembershipService`;
+- criação de DTOs de pedido e resposta;
+- listagem de memberships do projeto;
+- adição de colaboradores ativos;
+- alteração de papéis;
+- remoção lógica através do estado `INACTIVE`;
+- reativação da membership existente ao adicionar novamente um antigo membro;
+- rejeição de memberships ativas duplicadas;
+- proteção dos endpoints genéricos contra criação, alteração ou remoção de `OWNER`;
+- autoridade de `MANAGER` limitada a `CONTRIBUTOR` e `VIEWER`;
+- prevenção de privilege escalation;
+- proteção do colaborador definido em `project.managerId` contra remoção ou despromoção incompatível;
+- validação de que um novo manager é colaborador ativo e membro ativo com papel `OWNER` ou `MANAGER`;
+- suporte de concorrência otimista através do campo `version`;
+- resposta `409 Conflict` para dados desatualizados e memberships duplicadas;
+- tratamento neutro de conflitos de optimistic locking.
+
+### Validação
+
+A suite final foi executada depois do último refinamento e antes do merge:
+
+```text
+Tests run: 205
+Failures: 0
+Errors: 0
+Skipped: 0
+BUILD SUCCESS
+```
+
+Foram incluídos:
+
+- 19 testes do `ProjectMembershipService`;
+- 9 testes do `ProjectMembershipController`;
+- novos testes de consistência no `ProjectService`;
+- novos testes do tratamento de conflitos;
+- atualização dos testes de permissões.
+
+### Decisões de implementação
+
+A remoção é lógica para preservar o histórico da relação entre projeto e colaborador.
+
+A transferência de ownership não é realizada pelos endpoints genéricos. Deve existir posteriormente uma operação explícita e transacional com regras próprias.
+
+A interface React de gestão de membros ficou fora deste PR para manter o escopo concentrado no backend e permitir uma review aprofundada das regras de segurança.
+
+### Review e merge
+
+A review técnica confirmou:
+
+- matriz de permissões consistente com o princípio de least privilege;
+- papéis definidos com restrição clara de poderes administrativos;
+- proteção contra privilege escalation, mantendo a transferência de ownership fora dos endpoints genéricos;
+- gestão sólida de membros inativos através de `INACTIVE` e reativação da membership existente;
+- utilização adequada de `409 Conflict` para duplicados e concorrência;
+- validação consistente de `project.managerId` contra membros ativos e elegíveis.
+
+Não foram solicitadas alterações antes do merge. O PR #40 foi integrado em `develop`.
+
+### Trabalho pendente
+
+- criar a interface frontend de gestão de membros;
+- criar a transferência explícita e transacional de ownership;
+- adicionar testes HTTP de integração da autorização e concorrência;
+- eliminar a branch funcional depois de sincronizar o repositório local.
+
+### Próxima etapa
+
+Avançar numa branch baseada no `develop` atualizado com os testes HTTP de integração recomendados para a movimentação de tarefas entre projetos.
