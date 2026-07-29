@@ -2220,3 +2220,69 @@ Não foram solicitadas alterações antes do merge. O PR #40 foi integrado em `d
 ### Próxima etapa
 
 Avançar numa branch baseada no `develop` atualizado com os testes HTTP de integração recomendados para a movimentação de tarefas entre projetos.
+
+---
+
+## Marco 26 - 29/07/2026 - Testes HTTP de movimentação de tarefas entre projetos
+
+### Estado
+
+Implementação concluída na branch `test/task-move-authorization-integration` e registada no commit:
+
+```text
+94d9177 test: cover task moves between projects
+```
+
+Esta entrega fecha o follow-up técnico identificado durante a review do PR #39.
+
+### Objetivo
+
+Validar o fluxo completo de movimentação de tarefas entre projetos através da API, incluindo controller, service, autorização, tratamento de erros e estado persistido.
+
+### Cobertura adicionada
+
+Foram adicionados 10 testes HTTP de integração para confirmar:
+
+- projeto atual inexistente ou oculto devolve `404`;
+- a tarefa e o projeto atual são autorizados antes da validação do destino;
+- projeto de destino inexistente devolve `404`;
+- projeto de destino existente, mas invisível, devolve `404`;
+- membership `VIEWER` no destino devolve `403`;
+- assignee sem membership ativa no destino devolve `400`;
+- assignee com membership inativa no destino devolve `400`;
+- `OWNER` pode mover a tarefa com um assignee válido;
+- `OWNER` pode mover a tarefa sem assignee;
+- `CONTRIBUTOR` que move a própria tarefa sem assignee permanece associado de forma coerente com as regras atuais.
+
+Nos cenários recusados, os testes voltam a consultar a base de dados e confirmam que o projeto e o assignee da tarefa não foram alterados parcialmente.
+
+### Validação direcionada
+
+```text
+Tests run: 10
+Failures: 0
+Errors: 0
+Skipped: 0
+BUILD SUCCESS
+```
+
+### Validação completa
+
+```text
+Tests run: 215
+Failures: 0
+Errors: 0
+Skipped: 0
+BUILD SUCCESS
+```
+
+### Impacto
+
+- nenhum código de produção foi alterado;
+- a matriz de autorização existente foi validada através do fluxo HTTP completo;
+- a ordem das verificações e a ausência de alterações parciais ficaram protegidas contra regressões;
+- o total da suite backend passou de 205 para 215 testes.
+
+### Próxima etapa
+
+Abrir um pull request pequeno apenas com os testes e esta atualização documental. Depois do merge, avançar para a operação explícita e transacional de transferência de ownership.
