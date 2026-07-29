@@ -141,6 +141,8 @@ A arquitetura de controlo de acesso está documentada em:
 - Lista autenticada de projetos ligada a `GET /api/projects`.
 - Página de detalhe de projeto ligada a `GET /api/projects/{id}`.
 - Apresentação das tarefas associadas ao projeto.
+- Painel de membros integrado na página de detalhe do projeto, com listagem, adição, alteração de papel e remoção lógica.
+- Ações de gestão de membros adaptadas ao papel da membership do utilizador autenticado.
 - Lista autenticada de tarefas ligada a `GET /api/tasks`.
 - Página de detalhe de tarefa ligada a `GET /api/tasks/{id}`.
 - Apresentação do projeto, responsável, estado, prioridade, datas e tempo registado.
@@ -150,20 +152,19 @@ A arquitetura de controlo de acesso está documentada em:
 - Interface responsiva validada em desktop e numa viewport móvel de `390 × 844`.
 - Testes automatizados de armazenamento da autenticação, rotas protegidas e configuração de rotas.
 - `npm run lint`, `npm test` e `npm run build` validados com sucesso.
-- Suite frontend validada em 29/07/2026 com 16 testes em 3 ficheiros.
+- Suite frontend validada em 29/07/2026 com 32 testes em 6 ficheiros.
 
 ### Trabalho em curso
 
-- A transferência explícita e transacional de ownership foi implementada na branch `feature/project-ownership-transfer`.
-- O endpoint `POST /api/projects/{projectId}/ownership-transfer` atualiza o novo `OWNER`, o antigo proprietário e `project.managerId` numa única transação.
-- A operação exige memberships ativas, colaborador ativo e versões atuais das duas memberships.
-- Foram adicionados 21 testes, incluindo serviço, controller, integração HTTP e permissões.
-- A implementação está validada localmente com 236 testes e aguarda pull request, review técnica e integração em `develop`.
+- A interface React de gestão de membros foi implementada na branch `feature/project-membership-management-ui`.
+- O painel está integrado na página de detalhe do projeto e permite listar, adicionar, alterar o papel e remover membros.
+- As ações visíveis são determinadas pela membership do utilizador autenticado, e não pelo papel profissional global.
+- O `OWNER` e o atual `project.managerId` permanecem protegidos contra operações genéricas incompatíveis.
+- Foram adicionados 16 testes e a suite frontend está validada com 32 testes, lint sem erros e build de produção concluído.
 
 ### Trabalho ainda pendente
 
 - Criação, edição e eliminação de projetos e tarefas através do frontend.
-- Interface React para gestão de membros dos projetos.
 - Autorização de documentos e anexos através da mesma cadeia de acesso dos projetos e tarefas.
 - Proveniência de documentos e anexos, incluindo `createdById` e `uploadedById`.
 - Upload, download e eliminação de conteúdo de anexos através da API.
@@ -715,8 +716,8 @@ npm run build
 Na validação realizada em 29/07/2026:
 
 ```text
-Test Files: 3 passed
-Tests: 16 passed
+Test Files: 6 passed
+Tests: 32 passed
 Lint: aprovado
 Build: aprovado
 ```
