@@ -2594,3 +2594,63 @@ Estes pontos não bloqueiam a funcionalidade e deverão ser investigados num tra
 ### Próxima etapa
 
 Publicar a branch, abrir o pull request e executar a validação automática no GitHub.
+
+---
+
+## Marco 30 - 29/07/2026 - Correções de feedback visual nas memberships
+
+### Estado
+
+Implementação concluída na branch `fix/project-membership-ui-feedback` e registada nos commits:
+
+```text
+07882a9 fix: avoid duplicate membership conflict feedback
+e987680 fix: use accurate cursor for disabled action buttons
+```
+
+### Objetivo
+
+Corrigir dois sinais visuais que podiam induzir o utilizador em erro durante a gestão de memberships.
+
+### Implementação
+
+Foram realizadas as seguintes alterações:
+
+- as respostas `409 Conflict` passaram a apresentar apenas a mensagem devolvida pelo backend;
+- foi removida a instrução de atualização acrescentada novamente pelo frontend;
+- foi adicionado um teste de regressão para impedir a duplicação futura da mensagem;
+- o cursor dos botões de ação desativados foi alterado de `wait` para `not-allowed`.
+
+### Investigação da demora percebida
+
+A alteração de papel foi medida numa sessão do Chrome sem extensões:
+
+```text
+UI start: 0,0 ms
+Fetch start: +0,7 ms
+HTTP 200: +1118,8 ms
+Mensagem apresentada: +1148,6 ms
+```
+
+A atualização visual ocorreu aproximadamente 30 ms depois da resposta HTTP. A espera de 15 a 20 segundos não foi reproduzida. A principal causa da perceção de processamento contínuo era o cursor de ampulheta apresentado sobre o botão `Save role` quando este estava apenas desativado.
+
+### Validação
+
+```text
+Test Files: 8 passed
+Tests: 39 passed
+Lint: aprovado
+Build: aprovado
+Modules transformed: 99
+```
+
+### Impacto
+
+- a mensagem de conflito deixou de repetir instruções;
+- os botões desativados passaram a comunicar corretamente que a ação não está disponível;
+- foi eliminada a falsa indicação de processamento contínuo;
+- a suite frontend passou de 38 para 39 testes.
+
+### Próxima etapa
+
+Publicar a branch e abrir um pull request de manutenção para `develop`.
