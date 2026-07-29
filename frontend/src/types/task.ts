@@ -24,6 +24,15 @@ export interface Task {
   updatedAt: string
 }
 
+export interface TaskInput {
+  title: string
+  description: string | null
+  status: TaskStatus
+  priority: TaskPriority
+  projectId: number | null
+  assigneeId: number | null
+}
+
 export interface TaskListItem extends Task {
   projectName: string
   assigneeName: string

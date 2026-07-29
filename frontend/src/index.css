@@ -18,7 +18,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -883,6 +884,162 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+/* Task management */
+
+.task-management-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px;
+  background: #f8f9fb;
+  border: 1px solid #e2e7ee;
+  border-radius: 9px;
+}
+
+.task-management-toolbar p {
+  margin: 0;
+}
+
+.task-management-toolbar .eyebrow {
+  margin-bottom: 6px;
+}
+
+.task-management-toolbar > div > p:last-child {
+  color: #687484;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.task-form-panel {
+  display: grid;
+  gap: 20px;
+  padding: 22px;
+  background: #ffffff;
+  border: 1px solid #d7dee8;
+  border-radius: 9px;
+  box-shadow: 0 10px 24px rgb(23 32 51 / 5%);
+}
+
+.task-form-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.task-form-heading h2,
+.task-form-heading p {
+  margin: 0;
+}
+
+.task-form-heading .eyebrow {
+  margin-bottom: 6px;
+}
+
+.task-form-heading > p {
+  max-width: 480px;
+  color: #687484;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.task-management-form {
+  display: grid;
+  gap: 18px;
+}
+
+.task-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.task-form-field {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+}
+
+.task-form-field--wide {
+  grid-column: 1 / -1;
+}
+
+.task-form-field > span:first-child {
+  color: #344054;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.task-form-field input,
+.task-form-field select,
+.task-form-field textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  color: #172033;
+  background: #ffffff;
+  border: 1px solid #cfd6df;
+  border-radius: 7px;
+}
+
+.task-form-field textarea {
+  min-height: 120px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.task-form-field input:focus,
+.task-form-field select:focus,
+.task-form-field textarea:focus {
+  border-color: #274f87;
+  outline: 3px solid rgb(39 79 135 / 14%);
+}
+
+.task-form-field input:disabled,
+.task-form-field select:disabled,
+.task-form-field textarea:disabled {
+  color: #687484;
+  cursor: not-allowed;
+  background: #f2f4f7;
+}
+
+.task-form-field [aria-invalid="true"] {
+  border-color: #b42318;
+}
+
+.task-form-note {
+  margin: 0;
+  color: #687484;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 680px) {
+  .task-management-toolbar,
+  .task-form-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .task-management-toolbar .task-action-button {
+    width: 100%;
+  }
+
+  .task-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .task-form-field--wide {
+    grid-column: auto;
+  }
+
+  .task-form-panel {
+    padding: 18px;
+  }
+}
+
 /* Project detail */
 
 .project-card-footer {

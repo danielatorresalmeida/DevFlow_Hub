@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { ApiClientError } from '../api/apiClient'
 import { getCollaborators } from '../api/collaboratorsApi'
@@ -6,7 +6,10 @@ import { getProjects } from '../api/projectsApi'
 import { getTasks } from '../api/tasksApi'
 import { useAuth } from '../auth/useAuth'
 import { AppHeader } from '../components/AppHeader'
-import type { TaskListItem } from '../types/task'
+import { TaskForm } from '../components/TaskForm'
+import type { Collaborator } from '../types/collaborator'
+import type { Project } from '../types/project'
+import type { Task, TaskListItem } from '../types/task'
 
 const dateTimeFormatter = new Intl.DateTimeFormat(
   undefined,
@@ -99,16 +102,64 @@ function getDisplayedTime(
   return task.totalTimeSeconds + currentSessionSeconds
 }
 
+function createTaskListItem(
+  task: Task,
+  projectNames: Map<number, string>,
+  collaboratorNames: Map<number, string>,
+): TaskListItem {
+  return {
+    ...task,
+    projectName:
+      task.projectId === null
+        ? 'No project'
+        : projectNames.get(task.projectId) ??
+          'Unknown project',
+    assigneeName:
+      task.assigneeId === null
+        ? 'Not assigned'
+        : collaboratorNames.get(task.assigneeId) ??
+          'Unknown collaborator',
+  }
+}
+
 export function TasksPage() {
   const { session } = useAuth()
 
   const [tasks, setTasks] = useState<TaskListItem[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [collaborators, setCollaborators] = useState<
+    Collaborator[]
+  >([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] =
     useState<string | null>(null)
   const [reloadVersion, setReloadVersion] = useState(0)
   const [currentTime, setCurrentTime] = useState(
     () => Date.now(),
+  )
+  const [isCreateOpen, setIsCreateOpen] =
+    useState(false)
+  const [operationMessage, setOperationMessage] =
+    useState<string | null>(null)
+
+  const projectNames = useMemo(
+    () => new Map(
+      projects.map((project) => [
+        project.id,
+        project.name,
+      ]),
+    ),
+    [projects],
+  )
+
+  const collaboratorNames = useMemo(
+    () => new Map(
+      collaborators.map((collaborator) => [
+        collaborator.id,
+        collaborator.name,
+      ]),
+    ),
+    [collaborators],
   )
 
   useEffect(() => {
@@ -143,38 +194,31 @@ export function TasksPage() {
           ),
         ])
 
-        const projectNames = new Map(
+        const nextProjectNames = new Map(
           projectResponse.map((project) => [
             project.id,
             project.name,
           ]),
         )
 
-        const collaboratorNames = new Map(
+        const nextCollaboratorNames = new Map(
           collaboratorResponse.map((collaborator) => [
             collaborator.id,
             collaborator.name,
           ]),
         )
 
-        const taskItems = taskResponse.map(
-          (task): TaskListItem => ({
-            ...task,
-            projectName:
-              task.projectId === null
-                ? 'No project'
-                : projectNames.get(task.projectId) ??
-                  'Unknown project',
-            assigneeName:
-              task.assigneeId === null
-                ? 'Not assigned'
-                : collaboratorNames.get(
-                    task.assigneeId,
-                  ) ?? 'Unknown collaborator',
-          }),
+        setProjects(projectResponse)
+        setCollaborators(collaboratorResponse)
+        setTasks(
+          taskResponse.map((task) => (
+            createTaskListItem(
+              task,
+              nextProjectNames,
+              nextCollaboratorNames,
+            )
+          )),
         )
-
-        setTasks(taskItems)
         setCurrentTime(Date.now())
       } catch (error) {
         if (controller.signal.aborted) {
@@ -240,6 +284,21 @@ export function TasksPage() {
     setReloadVersion((current) => current + 1)
   }
 
+  function handleTaskCreated(task: Task) {
+    const item = createTaskListItem(
+      task,
+      projectNames,
+      collaboratorNames,
+    )
+
+    setTasks((current) => [item, ...current])
+    setIsCreateOpen(false)
+    setOperationMessage(
+      `Task #${task.id} was created.`,
+    )
+    setCurrentTime(Date.now())
+  }
+
   return (
     <main className="page">
       <section className="card card--wide">
@@ -252,6 +311,53 @@ export function TasksPage() {
           className="tasks-content"
           aria-live="polite"
         >
+          {!isLoading && !errorMessage && (
+            <div className="task-management-toolbar">
+              <div>
+                <p className="eyebrow">
+                  Task management
+                </p>
+                <p>
+                  Create personal tasks or assign work
+                  inside projects you can contribute to.
+                </p>
+              </div>
+
+              <button
+                className="task-action-button task-action-button--primary"
+                type="button"
+                onClick={() => {
+                  setIsCreateOpen((current) => !current)
+                  setOperationMessage(null)
+                }}
+              >
+                {isCreateOpen
+                  ? 'Close form'
+                  : 'Create task'}
+              </button>
+            </div>
+          )}
+
+          {!isLoading &&
+            !errorMessage &&
+            isCreateOpen && (
+              <TaskForm
+                mode="create"
+                session={session}
+                projects={projects}
+                onSaved={handleTaskCreated}
+                onCancel={() => {
+                  setIsCreateOpen(false)
+                }}
+              />
+            )}
+
+          {operationMessage && (
+            <p className="task-action-message task-action-message--success">
+              {operationMessage}
+            </p>
+          )}
+
           {isLoading && (
             <section className="dashboard-state">
               <h2>Loading tasks</h2>
@@ -285,8 +391,8 @@ export function TasksPage() {
               <section className="dashboard-state">
                 <h2>No tasks found</h2>
                 <p>
-                  Tasks created in the workspace will
-                  appear here.
+                  Create the first task using the form
+                  above.
                 </p>
               </section>
             )}

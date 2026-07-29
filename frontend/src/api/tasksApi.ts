@@ -1,6 +1,6 @@
 import { apiRequest } from './apiClient'
 import type { AuthSession } from '../types/auth'
-import type { Task } from '../types/task'
+import type { Task, TaskInput } from '../types/task'
 
 export function getTasks(
   session: AuthSession,
@@ -21,6 +21,54 @@ export function getTaskById(
   return apiRequest<Task>(
     `/api/tasks/${taskId}`,
     { method: 'GET', signal },
+    session,
+  )
+}
+
+export function createTask(
+  input: TaskInput,
+  session: AuthSession,
+  signal?: AbortSignal,
+): Promise<Task> {
+  return apiRequest<Task>(
+    '/api/tasks',
+    {
+      method: 'POST',
+      signal,
+      body: JSON.stringify(input),
+    },
+    session,
+  )
+}
+
+export function updateTask(
+  taskId: number,
+  input: TaskInput,
+  session: AuthSession,
+  signal?: AbortSignal,
+): Promise<Task> {
+  return apiRequest<Task>(
+    `/api/tasks/${taskId}`,
+    {
+      method: 'PUT',
+      signal,
+      body: JSON.stringify(input),
+    },
+    session,
+  )
+}
+
+export function deleteTask(
+  taskId: number,
+  session: AuthSession,
+  signal?: AbortSignal,
+): Promise<void> {
+  return apiRequest<void>(
+    `/api/tasks/${taskId}`,
+    {
+      method: 'DELETE',
+      signal,
+    },
     session,
   )
 }
