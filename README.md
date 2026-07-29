@@ -126,6 +126,7 @@ A arquitetura de controlo de acesso está documentada em:
 
 ### Frontend React
 
+- Interface dedicada de transferência de ownership disponível apenas ao `OWNER`, com confirmação explícita, controlo de concorrência e atualização imediata do gestor e das memberships.
 - Fundação React, TypeScript e Vite implementada.
 - Rotas `/login`, `/dashboard`, `/projects`, `/projects/:projectId`, `/tasks`, `/tasks/:taskId` e página de recurso não encontrado.
 - Rotas autenticadas protegidas.
@@ -160,7 +161,7 @@ A arquitetura de controlo de acesso está documentada em:
 - O painel está integrado na página de detalhe do projeto e permite listar, adicionar, alterar o papel e remover membros.
 - As ações visíveis são determinadas pela membership do utilizador autenticado, e não pelo papel profissional global.
 - O `OWNER` e o atual `project.managerId` permanecem protegidos contra operações genéricas incompatíveis.
-- Foram adicionados 16 testes e a suite frontend está validada com 32 testes, lint sem erros e build de produção concluído.
+- Foram adicionados 22 testes para gestão de memberships e transferência de ownership, e a suite frontend está validada com 38 testes, lint sem erros e build de produção concluído.
 
 ### Trabalho ainda pendente
 
@@ -716,8 +717,8 @@ npm run build
 Na validação realizada em 29/07/2026:
 
 ```text
-Test Files: 6 passed
-Tests: 32 passed
+Test Files: 8 passed
+Tests: 38 passed
 Lint: aprovado
 Build: aprovado
 ```

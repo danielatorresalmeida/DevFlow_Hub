@@ -1648,3 +1648,85 @@ h1 {
     padding: 18px;
   }
 }
+
+/* Project ownership transfer */
+
+.project-ownership-transfer-panel {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  background: #fffafa;
+  border: 1px solid #f3b7b2;
+  border-radius: 9px;
+}
+
+.project-ownership-warning {
+  padding: 16px;
+  color: #912018;
+  background: #fff1f0;
+  border: 1px solid #fecdca;
+  border-radius: 7px;
+}
+
+.project-ownership-warning strong,
+.project-ownership-warning p {
+  margin: 0;
+}
+
+.project-ownership-warning p {
+  margin-top: 6px;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.project-ownership-transfer-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 16px;
+}
+
+.project-ownership-confirmation {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: flex-start;
+  gap: 10px;
+  color: #344054;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.project-ownership-confirmation input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  flex: 0 0 auto;
+}
+
+.project-ownership-confirmation input:disabled {
+  cursor: not-allowed;
+}
+
+.project-ownership-error {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+}
+
+.project-ownership-error p {
+  margin: 0;
+}
+
+@media (max-width: 680px) {
+  .project-ownership-transfer-panel {
+    padding: 18px;
+  }
+
+  .project-ownership-transfer-form {
+    grid-template-columns: 1fr;
+  }
+
+  .project-ownership-transfer-form .task-action-button {
+    width: 100%;
+  }
+}

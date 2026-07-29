@@ -2468,3 +2468,129 @@ Build: aprovado
 ### Próxima etapa
 
 Criar o commit documental, publicar a branch e abrir um pull request concentrado apenas na interface de gestão de membros.
+
+---
+
+## Marco 29 - 29/07/2026 - Interface React de transferência de ownership
+
+### Estado
+
+Implementação concluída na branch `feature/project-ownership-transfer-ui` e registada no commit:
+
+```text
+9e63fec feat: add project ownership transfer UI
+```
+
+### Objetivo
+
+Disponibilizar na página de detalhe do projeto uma interface dedicada, segura e explícita para transferir ownership através da operação transacional existente no backend.
+
+### Implementação
+
+Foram adicionados:
+
+- tipos TypeScript para o pedido e a resposta da transferência;
+- cliente API para `POST /api/projects/{projectId}/ownership-transfer`;
+- componente `ProjectOwnershipTransferPanel`;
+- integração do painel na `ProjectDetailPage`;
+- atualização coordenada do projeto e da lista de memberships;
+- confirmação explícita através de checkbox e confirmação final do browser;
+- mensagens de sucesso, erro e conflito;
+- estilos responsivos para desktop e dispositivos móveis.
+
+### Regras da interface
+
+- o painel é apresentado apenas ao `OWNER` atual;
+- o proprietário atual não aparece como possível destinatário;
+- qualquer membro ativo com papel `MANAGER`, `CONTRIBUTOR` ou `VIEWER` pode ser selecionado;
+- o botão permanece desativado até existir um destinatário e uma confirmação explícita;
+- são enviadas as versões atuais das duas memberships;
+- conflitos `409 Conflict` não são apresentados como sucesso;
+- o novo proprietário passa a `OWNER`;
+- o proprietário anterior passa a `MANAGER`;
+- `project.managerId` e o nome do gestor são atualizados imediatamente;
+- o painel desaparece para o antigo proprietário após a transferência.
+
+### Testes adicionados
+
+Foram adicionados 6 testes:
+
+- 1 teste do cliente da API;
+- 5 testes do componente de transferência.
+
+A cobertura inclui:
+
+- painel oculto para utilizadores que não sejam `OWNER`;
+- candidatos elegíveis;
+- confirmação obrigatória;
+- cancelamento da confirmação final;
+- payload com as versões das duas memberships;
+- tratamento de conflitos `409 Conflict`.
+
+### Validação direcionada
+
+```text
+Test Files: 2 passed
+Tests: 6 passed
+```
+
+### Validação completa
+
+```text
+Test Files: 8 passed
+Tests: 38 passed
+Lint: aprovado
+Build: aprovado
+Modules transformed: 99
+```
+
+### Validação manual
+
+A transferência foi validada nos dois sentidos.
+
+Transferência inicial:
+
+```text
+Bruno Silva: MANAGER
+Daniel Rocha: OWNER
+Manager do projeto: Daniel Rocha
+```
+
+Restauração do estado inicial:
+
+```text
+Bruno Silva: OWNER
+Daniel Rocha: MANAGER
+Manager do projeto: Bruno Silva
+```
+
+Também foram confirmados:
+
+- persistência após atualização da página;
+- atualização imediata dos cartões;
+- apresentação do painel ao novo proprietário;
+- remoção do painel para o antigo proprietário;
+- resposta HTTP `200`;
+- ausência de erros inesperados da aplicação.
+
+### Pontos de acompanhamento
+
+Foram registados para intervenção posterior:
+
+- espera percebida de aproximadamente 15 a 20 segundos em algumas operações de gestão de membros, embora os pedidos HTTP observados tenham terminado em menos de 100 ms;
+- transferência de ownership com duração aproximada de 3,20 segundos durante o teste manual;
+- instrução de atualização repetida na mensagem de conflito das operações de membership.
+
+Estes pontos não bloqueiam a funcionalidade e deverão ser investigados num trabalho separado de desempenho e experiência de utilização.
+
+### Impacto
+
+- a transferência de ownership passou a estar disponível no frontend;
+- a operação permanece separada dos controlos genéricos de memberships;
+- a interface respeita a autorização e a concorrência otimista do backend;
+- o total da suite frontend passou de 32 para 38 testes;
+- o projeto e as memberships permanecem consistentes após a transferência.
+
+### Próxima etapa
+
+Publicar a branch, abrir o pull request e executar a validação automática no GitHub.
