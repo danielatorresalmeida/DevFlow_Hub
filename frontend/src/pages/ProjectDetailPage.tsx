@@ -8,9 +8,13 @@ import { getTasks } from '../api/tasksApi'
 import { useAuth } from '../auth/useAuth'
 import { AppHeader } from '../components/AppHeader'
 import { ProjectMembersPanel } from '../components/ProjectMembersPanel'
+import { ProjectOwnershipTransferPanel } from '../components/ProjectOwnershipTransferPanel'
 import type { Collaborator } from '../types/collaborator'
 import type { Project } from '../types/project'
-import type { ProjectMember } from '../types/projectMembership'
+import type {
+  ProjectMember,
+  ProjectOwnershipTransferResponse,
+} from '../types/projectMembership'
 import type { Task } from '../types/task'
 
 interface ProjectTaskItem extends Task {
@@ -125,6 +129,9 @@ export function ProjectDetailPage() {
   const [projectMembers, setProjectMembers] =
     useState<ProjectMember[]>([])
 
+  const [ownershipTransferNotice, setOwnershipTransferNotice] =
+    useState<string | null>(null)
+
   const [isLoading, setIsLoading] = useState(true)
   const [isNotFound, setIsNotFound] = useState(false)
   const [errorMessage, setErrorMessage] =
@@ -148,6 +155,7 @@ export function ProjectDetailPage() {
       setIsLoading(true)
       setIsNotFound(false)
       setErrorMessage(null)
+      setOwnershipTransferNotice(null)
 
       try {
         const [
@@ -265,6 +273,47 @@ export function ProjectDetailPage() {
 
   function handleRetry() {
     setReloadVersion((current) => current + 1)
+  }
+
+  function handleOwnershipTransferred(
+    response: ProjectOwnershipTransferResponse,
+  ) {
+    setProject((currentProject) => (
+      currentProject
+        ? {
+            ...currentProject,
+            managerId: response.managerId,
+          }
+        : currentProject
+    ))
+
+    setManagerName(
+      response.newOwner.collaboratorName,
+    )
+
+    setProjectMembers((currentMembers) => (
+      currentMembers.map((member) => {
+        if (
+          member.collaboratorId ===
+          response.previousOwner.collaboratorId
+        ) {
+          return response.previousOwner
+        }
+
+        if (
+          member.collaboratorId ===
+          response.newOwner.collaboratorId
+        ) {
+          return response.newOwner
+        }
+
+        return member
+      })
+    ))
+
+    setOwnershipTransferNotice(
+      `Ownership was transferred to ${response.newOwner.collaboratorName}. Your project role is now Manager.`,
+    )
   }
 
   return (
@@ -386,6 +435,25 @@ export function ProjectDetailPage() {
                     </div>
                   </dl>
                 </section>
+
+                {ownershipTransferNotice && (
+                  <p
+                    className="project-member-message project-member-message--success"
+                    role="status"
+                  >
+                    {ownershipTransferNotice}
+                  </p>
+                )}
+
+                <ProjectOwnershipTransferPanel
+                  projectId={project.id}
+                  session={session}
+                  members={projectMembers}
+                  onTransferComplete={
+                    handleOwnershipTransferred
+                  }
+                  onRefresh={handleRetry}
+                />
 
                 <ProjectMembersPanel
                   projectId={project.id}

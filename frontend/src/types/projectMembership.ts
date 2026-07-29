@@ -37,3 +37,16 @@ export interface UpdateProjectMemberRequest {
   role: ManagedProjectMembershipRole
   version: number
 }
+
+export interface TransferProjectOwnershipRequest {
+  newOwnerCollaboratorId: number
+  currentOwnerMembershipVersion: number
+  newOwnerMembershipVersion: number
+}
+
+export interface ProjectOwnershipTransferResponse {
+  projectId: number
+  managerId: number
+  previousOwner: ProjectMember
+  newOwner: ProjectMember
+}
