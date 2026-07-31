@@ -4,9 +4,9 @@ Frontend React do DevFlow Hub, responsável pela autenticação do utilizador, n
 
 ## Tecnologias
 
-- React 19
-- TypeScript 6
-- Vite 8
+- React 19.2.8 (versão bloqueada em `package-lock.json`)
+- TypeScript 6.0.3 (versão bloqueada em `package-lock.json`)
+- Vite 8.1.5 (versão bloqueada em `package-lock.json`)
 - React Router 8.3.0
 - Fetch API nativa
 - ESLint

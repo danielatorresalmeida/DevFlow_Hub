@@ -117,11 +117,11 @@ Object-storage keys are internal identifiers and never substitute for resource a
 
 ## Dashboard endpoint
 
-| Method and path | Required authorization | Important validation | Delivery |
+| Method and path | Required authorization | Current behavior | Remaining policy gap |
 |---|---|---|---|
-| `GET /api/dashboard` | Authenticated collaborator | Projects, tasks, totals and recent items must be calculated only from accessible resources | Dashboard authorization PR after task enforcement |
+| `GET /api/dashboard` | Authenticated collaborator | Project and task counts, status totals, tracked time, recent tasks and upcoming projects are derived from resources accessible to the current collaborator | Collaborator and internal-program totals are still global and require a separate organization-level authorization policy |
 
-The current dashboard uses project and task services plus collaborator data. It must not expose global task counts or collaborator information unrelated to the current collaborator's accessible projects.
+The dashboard currently applies project and task authorization through `ProjectService.findAll()` and `TaskService.findAll()`. The collaborator count and internal-program count remain global. This is a documented limitation rather than project-role authorization, because project memberships must not be reused as system-administrator roles.
 
 ## Collaborator endpoints
 
@@ -145,19 +145,18 @@ Project roles must not be treated as system-administrator roles.
 | `PUT /api/internal-programs/{id}` | Any authenticated collaborator | System administrator or future program-manager role | Global authorization PR |
 | `DELETE /api/internal-programs/{id}` | Any authenticated collaborator | System administrator only or explicit program-owner policy | Global authorization PR |
 
-## Project membership endpoints to add
+## Project membership endpoints
 
-The controller does not yet expose membership management. The target API requires operations equivalent to:
+Membership management is implemented through `ProjectMembershipController` and `ProjectMembershipService`:
 
-| Operation | Required authorization | Invariant |
+| Method and path | Required authorization | Invariant |
 |---|---|---|
-| List project memberships | Any active project member | Return membership data only for that project |
-| Add member | Owner, or manager for contributor/viewer roles | Collaborator and project must exist; prevent duplicate membership |
-| Change role | Owner, or manager within contributor/viewer range | Manager cannot modify manager/owner; preserve final owner |
-| Change status or remove member | Same as role-change authority | Preserve final owner and prevent privilege escalation |
-| Leave project | Current collaborator | Final owner cannot leave until another owner exists |
+| `GET /api/projects/{projectId}/members` | Any active project member | Return memberships only for the requested visible project |
+| `POST /api/projects/{projectId}/members` | `OWNER`, or `MANAGER` for `CONTRIBUTOR` and `VIEWER` roles | Collaborator and project must exist; reactivate an inactive membership instead of creating a duplicate |
+| `PATCH /api/projects/{projectId}/members/{collaboratorId}` | `OWNER`, or `MANAGER` within the contributor/viewer range | Generic membership operations cannot create, promote, demote or remove `OWNER`; optimistic version checks prevent stale updates |
+| `DELETE /api/projects/{projectId}/members/{collaboratorId}` | Same hierarchy as role changes | Removal is logical through `INACTIVE`; preserve ownership and prevent privilege escalation |
 
-Exact route design should be finalized when the membership service is implemented.
+Explicit ownership transfer is implemented separately through `POST /api/projects/{projectId}/ownership-transfer`. A self-service “leave project” endpoint is not implemented in the current scope.
 
 ## Cross-cutting verification checklist
 
