@@ -70,9 +70,9 @@ Architecture documentation:
 
 ### Frontend
 
-- React 19
-- TypeScript 6
-- Vite 8
+- React 19.2.8 (locked in `package-lock.json`)
+- TypeScript 6.0.3 (locked in `package-lock.json`)
+- Vite 8.1.5 (locked in `package-lock.json`)
 - React Router 8.3.0
 - Native Fetch API
 - ESLint

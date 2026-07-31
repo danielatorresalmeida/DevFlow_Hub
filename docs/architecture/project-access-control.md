@@ -188,22 +188,25 @@ Their current authenticated CRUD endpoints require a future system-level adminis
 
 Until that policy is implemented, these endpoints remain a known authorization gap and must not be treated as covered by this decision.
 
-## Implementation boundaries
+## Implementation status and boundaries
 
-The authorization work is delivered incrementally:
+The authorization architecture has been delivered incrementally. The current status is:
 
-1. project-membership persistence foundation;
-2. central current-collaborator and project-permission services;
-3. project listing, read, update and delete enforcement;
-4. transactional project creation with automatic owner membership;
-5. task authorization, including standalone-task rules and parent moves;
-6. document authorization and document provenance;
-7. attachment authorization, upload provenance and object-storage integration;
-8. dashboard filtering;
-9. project-membership management endpoints;
-10. separate global authorization for collaborators and internal programs.
+| Area | Status |
+|---|---|
+| Project-membership persistence | Implemented |
+| Current-collaborator resolution and project permissions | Implemented |
+| Project listing, read, update and delete enforcement | Implemented |
+| Transactional project creation with automatic `OWNER` membership | Implemented |
+| Task authorization, standalone-task rules and parent moves | Implemented |
+| Project-membership management endpoints | Implemented |
+| Explicit transactional ownership transfer | Implemented |
+| Dashboard filtering for projects, tasks, status totals, tracked time and recent items | Implemented |
+| Document authorization and creator provenance | Pending |
+| Attachment authorization, upload provenance and HTTP object-storage operations | Pending |
+| Separate global authorization for collaborators and internal programs | Pending |
 
-The current endpoint inventory and implementation order are documented in [`project-access-endpoint-inventory.md`](project-access-endpoint-inventory.md).
+The collaborator and internal-program totals in the dashboard remain global until the separate organization-level authorization policy is implemented. The current endpoint inventory is documented in [`project-access-endpoint-inventory.md`](project-access-endpoint-inventory.md).
 
 ## Consequences
 
