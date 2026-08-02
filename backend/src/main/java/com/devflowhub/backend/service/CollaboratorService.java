@@ -5,6 +5,7 @@ import com.devflowhub.backend.entity.Collaborator;
 import com.devflowhub.backend.exception.InvalidOperationException;
 import com.devflowhub.backend.exception.ResourceNotFoundException;
 import com.devflowhub.backend.repository.CollaboratorRepository;
+import com.devflowhub.backend.security.SystemAuthorizationService;
 import com.devflowhub.backend.util.TextNormalizer;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,13 +21,16 @@ public class CollaboratorService {
 
     private final CollaboratorRepository collaboratorRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SystemAuthorizationService systemAuthorizationService;
 
     public CollaboratorService(
             CollaboratorRepository collaboratorRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            SystemAuthorizationService systemAuthorizationService
     ) {
         this.collaboratorRepository = collaboratorRepository;
         this.passwordEncoder = passwordEncoder;
+        this.systemAuthorizationService = systemAuthorizationService;
     }
 
     public List<Collaborator> findAll() {
@@ -48,6 +52,7 @@ public class CollaboratorService {
 
     @Transactional
     public Collaborator create(Collaborator collaborator) {
+        systemAuthorizationService.requireAdmin();
         normalize(collaborator);
         validateNewCollaborator(collaborator);
 
@@ -59,6 +64,7 @@ public class CollaboratorService {
 
     @Transactional
     public Collaborator update(Long id, Collaborator updatedData) {
+        systemAuthorizationService.requireAdmin();
         Collaborator existing = getRequired(id);
         normalize(updatedData);
 
@@ -82,6 +88,7 @@ public class CollaboratorService {
 
     @Transactional
     public void delete(Long id) {
+        systemAuthorizationService.requireAdmin();
         Collaborator collaborator = getRequired(id);
         collaboratorRepository.delete(collaborator);
     }
