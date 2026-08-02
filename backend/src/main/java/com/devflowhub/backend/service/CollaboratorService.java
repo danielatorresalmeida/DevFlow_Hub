@@ -1,5 +1,6 @@
 package com.devflowhub.backend.service;
 
+import com.devflowhub.backend.domain.SystemRole;
 import com.devflowhub.backend.entity.Collaborator;
 import com.devflowhub.backend.exception.InvalidOperationException;
 import com.devflowhub.backend.exception.ResourceNotFoundException;
@@ -50,6 +51,8 @@ public class CollaboratorService {
         normalize(collaborator);
         validateNewCollaborator(collaborator);
 
+        // System roles are assigned only by trusted server-side administration.
+        collaborator.setSystemRole(SystemRole.USER);
         collaborator.setPassword(passwordEncoder.encode(collaborator.getPassword()));
         return collaboratorRepository.save(collaborator);
     }

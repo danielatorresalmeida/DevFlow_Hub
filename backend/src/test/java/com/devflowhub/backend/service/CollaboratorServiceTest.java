@@ -1,5 +1,6 @@
 package com.devflowhub.backend.service;
 
+import com.devflowhub.backend.domain.SystemRole;
 import com.devflowhub.backend.entity.Collaborator;
 import com.devflowhub.backend.exception.InvalidOperationException;
 import com.devflowhub.backend.repository.CollaboratorRepository;
@@ -59,6 +60,7 @@ class CollaboratorServiceTest {
         assertThat(result.getEmail()).isEqualTo("ana@example.com");
         assertThat(result.getRole()).isEqualTo("Developer");
         assertThat(result.getActive()).isTrue();
+        assertThat(result.getSystemRole()).isEqualTo(SystemRole.USER);
         assertThat(result.getPassword()).isEqualTo("{bcrypt}encoded-secret");
 
         verify(passwordEncoder).encode("secret");
@@ -92,6 +94,7 @@ class CollaboratorServiceTest {
                 "{bcrypt}old-password-hash"
         );
         existing.setId(1L);
+        existing.setSystemRole(SystemRole.ADMIN);
 
         Collaborator updatedData = collaborator(
                 "Ana Updated",
@@ -112,6 +115,7 @@ class CollaboratorServiceTest {
 
         assertThat(result.getPassword()).isEqualTo("{bcrypt}old-password-hash");
         assertThat(result.getName()).isEqualTo("Ana Updated");
+        assertThat(result.getSystemRole()).isEqualTo(SystemRole.ADMIN);
         assertThat(result.getActive()).isFalse();
 
         verify(passwordEncoder, never()).encode(any());
