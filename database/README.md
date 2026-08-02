@@ -14,6 +14,7 @@ Cria uma instalação nova da base de dados, incluindo:
 - tabela `internal_programs`;
 - tabela `documents`;
 - tabela `attachments`;
+- papel global `collaborators.system_role`;
 - chaves estrangeiras;
 - restrições de domínio;
 - índices;
@@ -68,6 +69,16 @@ Migração idempotente que cria a fundação para documentos e anexos. O modelo 
 
 A implementação do armazenamento físico e dos endpoints multipart será realizada numa etapa posterior.
 
+### `migrations/20260801_add_system_roles.sql`
+
+Migração idempotente que separa a autorização global das memberships de projeto. O script:
+
+- adiciona `collaborators.system_role`;
+- migra colaboradores existentes para `USER`;
+- aceita apenas `USER` e `ADMIN`;
+- mantém `collaborators.role` como função profissional informativa;
+- inclui um exemplo comentado para promover explicitamente a primeira conta administrativa.
+
 ## Atualizar uma instalação existente
 
 Antes de executar qualquer migração, criar uma cópia de segurança da base de
@@ -78,6 +89,8 @@ Liquibase. Devem ser executadas pela seguinte ordem:
 
 1. `migrations/20260724_restore_core_foreign_keys.sql`
 2. `migrations/20260724_add_documents_foundation.sql`
+3. `migrations/20260727_add_project_memberships.sql`
+4. `migrations/20260801_add_system_roles.sql`
 
 A partir da raiz do projeto, com `psql` disponível no `PATH`:
 
@@ -85,9 +98,13 @@ A partir da raiz do projeto, com `psql` disponível no `PATH`:
 psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260724_restore_core_foreign_keys.sql
 
 psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260724_add_documents_foundation.sql
+
+psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260727_add_project_memberships.sql
+
+psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260801_add_system_roles.sql
 ```
 
-Os dois scripts são idempotentes e podem ser executados novamente para
+Os scripts são idempotentes e podem ser executados novamente para
 verificação. `ON_ERROR_STOP=1` impede que a execução continue depois de um
 erro SQL.
 
@@ -122,11 +139,11 @@ Todas as contas usam a palavra-passe local `password123`:
 
 | Nome | Email | Acesso inicial |
 |---|---|---|
-| Carla Mendes | `carla.mendes@example.com` | `OWNER` e gestora dos projetos de demonstração |
-| Ana Silva | `ana.silva@example.com` | `CONTRIBUTOR` em `DevFlow Hub MVP` |
-| Bruno Costa | `bruno.costa@example.com` | `CONTRIBUTOR` em `DevFlow Hub MVP` |
+| Carla Mendes | `carla.mendes@example.com` | `ADMIN` global, `OWNER` e gestora dos projetos de demonstração |
+| Ana Silva | `ana.silva@example.com` | `USER` global e `CONTRIBUTOR` em `DevFlow Hub MVP` |
+| Bruno Costa | `bruno.costa@example.com` | `USER` global e `CONTRIBUTOR` em `DevFlow Hub MVP` |
 
-A função profissional guardada em `collaborators.role` é informativa. A autorização de cada projeto depende da tabela `project_memberships`.
+A função profissional guardada em `collaborators.role` é informativa. O campo `collaborators.system_role` controla a futura administração global, enquanto a autorização de cada projeto depende da tabela `project_memberships`. Um `ADMIN` global não recebe automaticamente acesso aos projetos.
 
 Para testar `MANAGER` e `VIEWER`, inicia sessão como Carla Mendes, abre um projeto e altera ou adiciona memberships. Depois autentica-te com a conta correspondente.
 

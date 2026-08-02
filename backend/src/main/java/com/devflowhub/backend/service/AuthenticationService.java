@@ -116,6 +116,7 @@ public class AuthenticationService {
                 collaborator.getName(),
                 collaborator.getEmail(),
                 collaborator.getRole(),
+                collaborator.getSystemRole(),
                 Boolean.TRUE.equals(collaborator.getActive())
         );
     }

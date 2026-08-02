@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS collaborators (
     email VARCHAR(150) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     role VARCHAR(100) NOT NULL,
+    system_role VARCHAR(20) NOT NULL DEFAULT 'USER',
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -89,6 +90,7 @@ CREATE TABLE IF NOT EXISTS project_memberships (
 -- 2. Columns added during later project iterations
 ALTER TABLE collaborators
     ADD COLUMN IF NOT EXISTS password VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS system_role VARCHAR(20) DEFAULT 'USER',
     ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE,
     ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
@@ -128,6 +130,7 @@ WHERE password IS NOT NULL
   AND BTRIM(password) <> ''
   AND password !~ '^\{[A-Za-z0-9_-]+\}.+'
   AND password !~ '^\[aby]\$[0-9]{2}\$';
+UPDATE collaborators SET system_role = 'USER' WHERE system_role IS NULL;
 UPDATE collaborators SET active = TRUE WHERE active IS NULL;
 UPDATE collaborators SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL;
 UPDATE tasks SET total_time_seconds = 0 WHERE total_time_seconds IS NULL;
@@ -137,6 +140,8 @@ UPDATE tasks SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL;
 
 ALTER TABLE collaborators
     ALTER COLUMN password SET NOT NULL,
+    ALTER COLUMN system_role SET DEFAULT 'USER',
+    ALTER COLUMN system_role SET NOT NULL,
     ALTER COLUMN active SET DEFAULT TRUE,
     ALTER COLUMN active SET NOT NULL,
     ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP,
@@ -156,6 +161,21 @@ BEGIN
     END IF;
 END
 $password_constraint$;
+
+DO $system_role_constraint$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'public.collaborators'::regclass
+          AND conname = 'collaborators_system_role_check'
+    ) THEN
+        ALTER TABLE collaborators
+            ADD CONSTRAINT collaborators_system_role_check
+            CHECK (system_role IN ('USER', 'ADMIN'));
+    END IF;
+END
+$system_role_constraint$;
 
 ALTER TABLE tasks
     ALTER COLUMN total_time_seconds SET DEFAULT 0,
@@ -356,11 +376,11 @@ CREATE INDEX IF NOT EXISTS
 
 -- 7. Demonstration data
 -- BCrypt hashes are generated for local demonstration accounts.
-INSERT INTO collaborators (name, email, password, role, active)
+INSERT INTO collaborators (name, email, password, role, system_role, active)
 VALUES
-    ('Ana Silva', 'ana.silva@example.com', '{bcrypt}' || crypt('password123', gen_salt('bf', 10)), 'Frontend Developer', TRUE),
-    ('Bruno Costa', 'bruno.costa@example.com', '{bcrypt}' || crypt('password123', gen_salt('bf', 10)), 'Backend Developer', TRUE),
-    ('Carla Mendes', 'carla.mendes@example.com', '{bcrypt}' || crypt('password123', gen_salt('bf', 10)), 'Project Manager', TRUE)
+    ('Ana Silva', 'ana.silva@example.com', '{bcrypt}' || crypt('password123', gen_salt('bf', 10)), 'Frontend Developer', 'USER', TRUE),
+    ('Bruno Costa', 'bruno.costa@example.com', '{bcrypt}' || crypt('password123', gen_salt('bf', 10)), 'Backend Developer', 'USER', TRUE),
+    ('Carla Mendes', 'carla.mendes@example.com', '{bcrypt}' || crypt('password123', gen_salt('bf', 10)), 'Project Manager', 'ADMIN', TRUE)
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO projects (name, description, status, start_date, end_date, manager_id)

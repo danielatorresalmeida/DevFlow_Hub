@@ -347,6 +347,10 @@ JWT_EXPIRATION
 OBJECT_STORAGE_PROVIDER
 OBJECT_STORAGE_LOCAL_ROOT_DIRECTORY
 PORT
+DEVFLOW_BOOTSTRAP_ADMIN_ENABLED
+DEVFLOW_BOOTSTRAP_ADMIN_NAME
+DEVFLOW_BOOTSTRAP_ADMIN_EMAIL
+DEVFLOW_BOOTSTRAP_ADMIN_PASSWORD
 ```
 
 Exemplo para PowerShell:
@@ -365,6 +369,19 @@ $env:PORT = "8080"
 ```
 
 `JWT_SECRET` deve ser Base64 válido e conter pelo menos 32 bytes depois da descodificação.
+
+#### Bootstrap único do primeiro administrador
+
+Num ambiente profissional deve ser usada uma conta administrativa dedicada, separada das contas de demonstração e dos papéis de projeto. Antes da primeira inicialização, define a conta através de variáveis de ambiente do processo:
+
+```powershell
+$env:DEVFLOW_BOOTSTRAP_ADMIN_ENABLED = "true"
+$env:DEVFLOW_BOOTSTRAP_ADMIN_NAME = "DevFlow Administrator"
+$env:DEVFLOW_BOOTSTRAP_ADMIN_EMAIL = "admin@example.com"
+$env:DEVFLOW_BOOTSTRAP_ADMIN_PASSWORD = "<palavra-passe-forte-e-unica>"
+```
+
+A palavra-passe deve ter entre 12 e 64 caracteres e incluir maiúsculas, minúsculas, números e caracteres especiais. O bootstrap recusa a execução quando já existe um administrador ou quando o email já está atribuído. Depois da criação, interrompe a aplicação e remove as quatro variáveis antes de a iniciar novamente. Credenciais administrativas e segredos de produção nunca devem ser guardados no Git.
 
 O valor predefinido de `JWT_EXPIRATION` é `PT15M`. A implementação atual não possui refresh token, pelo que a sessão termina aproximadamente 15 minutos depois do login mesmo quando existe atividade. Durante testes manuais prolongados pode ser usado outro valor local, por exemplo `PT1H`, sem alterar o código nem guardar essa configuração no Git.
 

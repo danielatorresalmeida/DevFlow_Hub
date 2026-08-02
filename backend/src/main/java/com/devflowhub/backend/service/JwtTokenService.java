@@ -44,6 +44,7 @@ public class JwtTokenService {
                 .claim("email", collaborator.getEmail())
                 .claim("name", collaborator.getName())
                 .claim("role", collaborator.getRole())
+                .claim("system_role", collaborator.getSystemRole().name())
                 .build();
 
         String accessToken = jwtEncoder

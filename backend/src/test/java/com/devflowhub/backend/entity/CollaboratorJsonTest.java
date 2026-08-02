@@ -1,5 +1,6 @@
 package com.devflowhub.backend.entity;
 
+import com.devflowhub.backend.domain.SystemRole;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
@@ -17,11 +18,14 @@ class CollaboratorJsonTest {
         collaborator.setEmail("ana@example.com");
         collaborator.setPassword("{bcrypt}stored-password-hash");
         collaborator.setRole("Developer");
+        collaborator.setSystemRole(SystemRole.ADMIN);
         collaborator.setActive(true);
 
         String json = objectMapper.writeValueAsString(collaborator);
 
         assertThat(json)
+                .doesNotContain("systemRole")
+                .doesNotContain("ADMIN")
                 .doesNotContain("password")
                 .doesNotContain("stored-password-hash");
     }
@@ -34,6 +38,7 @@ class CollaboratorJsonTest {
                   "email": "ana@example.com",
                   "password": "new-secret",
                   "role": "Developer",
+                  "systemRole": "ADMIN",
                   "active": true
                 }
                 """;
@@ -41,5 +46,6 @@ class CollaboratorJsonTest {
         Collaborator collaborator = objectMapper.readValue(json, Collaborator.class);
 
         assertThat(collaborator.getPassword()).isEqualTo("new-secret");
+        assertThat(collaborator.getSystemRole()).isEqualTo(SystemRole.USER);
     }
 }

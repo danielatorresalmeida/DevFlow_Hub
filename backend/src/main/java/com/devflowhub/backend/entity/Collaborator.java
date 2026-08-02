@@ -1,8 +1,12 @@
 package com.devflowhub.backend.entity;
 
+import com.devflowhub.backend.domain.SystemRole;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -43,6 +47,13 @@ public class Collaborator {
     @Column(nullable = false, length = 100)
     private String role;
 
+    // This application-wide role is independent from project memberships.
+    // It is exposed only through dedicated authenticated/admin DTOs.
+    @JsonIgnore
+    @Enumerated(EnumType.STRING)
+    @Column(name = "system_role", nullable = false, length = 20)
+    private SystemRole systemRole = SystemRole.USER;
+
     @Column(nullable = false)
     private Boolean active = true;
 
@@ -56,6 +67,10 @@ public class Collaborator {
     protected void onCreate() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
+        }
+
+        if (systemRole == null) {
+            systemRole = SystemRole.USER;
         }
 
         if (active == null) {
@@ -101,6 +116,14 @@ public class Collaborator {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public SystemRole getSystemRole() {
+        return systemRole;
+    }
+
+    public void setSystemRole(SystemRole systemRole) {
+        this.systemRole = systemRole;
     }
 
     public Boolean getActive() {

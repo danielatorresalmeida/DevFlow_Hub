@@ -6,6 +6,7 @@ import com.devflowhub.backend.exception.InvalidOperationException;
 import com.devflowhub.backend.exception.ResourceNotFoundException;
 import com.devflowhub.backend.repository.CollaboratorRepository;
 import com.devflowhub.backend.repository.InternalProgramRepository;
+import com.devflowhub.backend.security.SystemAuthorizationService;
 import com.devflowhub.backend.util.TextNormalizer;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -20,13 +21,16 @@ public class InternalProgramService {
 
     private final InternalProgramRepository internalProgramRepository;
     private final CollaboratorRepository collaboratorRepository;
+    private final SystemAuthorizationService systemAuthorizationService;
 
     public InternalProgramService(
             InternalProgramRepository internalProgramRepository,
-            CollaboratorRepository collaboratorRepository
+            CollaboratorRepository collaboratorRepository,
+            SystemAuthorizationService systemAuthorizationService
     ) {
         this.internalProgramRepository = internalProgramRepository;
         this.collaboratorRepository = collaboratorRepository;
+        this.systemAuthorizationService = systemAuthorizationService;
     }
 
     public List<InternalProgram> findAll() {
@@ -48,6 +52,7 @@ public class InternalProgramService {
 
     @Transactional
     public InternalProgram create(InternalProgram internalProgram) {
+        systemAuthorizationService.requireAdmin();
         internalProgram.setId(null);
         prepareAndValidate(internalProgram);
         return internalProgramRepository.save(internalProgram);
@@ -55,6 +60,7 @@ public class InternalProgramService {
 
     @Transactional
     public InternalProgram update(Long id, InternalProgram updatedData) {
+        systemAuthorizationService.requireAdmin();
         InternalProgram existing = getRequired(id);
         prepareAndValidate(updatedData);
 
@@ -71,6 +77,7 @@ public class InternalProgramService {
 
     @Transactional
     public void delete(Long id) {
+        systemAuthorizationService.requireAdmin();
         internalProgramRepository.delete(getRequired(id));
     }
 

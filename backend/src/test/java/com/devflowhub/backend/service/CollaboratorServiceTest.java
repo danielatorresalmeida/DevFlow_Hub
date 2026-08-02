@@ -1,8 +1,11 @@
 package com.devflowhub.backend.service;
 
+import com.devflowhub.backend.domain.SystemRole;
 import com.devflowhub.backend.entity.Collaborator;
 import com.devflowhub.backend.exception.InvalidOperationException;
+import com.devflowhub.backend.exception.SystemAccessDeniedException;
 import com.devflowhub.backend.repository.CollaboratorRepository;
+import com.devflowhub.backend.security.SystemAuthorizationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,8 +18,10 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,13 +33,17 @@ class CollaboratorServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private SystemAuthorizationService systemAuthorizationService;
+
     private CollaboratorService collaboratorService;
 
     @BeforeEach
     void setUp() {
         collaboratorService = new CollaboratorService(
                 collaboratorRepository,
-                passwordEncoder
+                passwordEncoder,
+                systemAuthorizationService
         );
     }
 
@@ -59,10 +68,31 @@ class CollaboratorServiceTest {
         assertThat(result.getEmail()).isEqualTo("ana@example.com");
         assertThat(result.getRole()).isEqualTo("Developer");
         assertThat(result.getActive()).isTrue();
+        assertThat(result.getSystemRole()).isEqualTo(SystemRole.USER);
         assertThat(result.getPassword()).isEqualTo("{bcrypt}encoded-secret");
 
         verify(passwordEncoder).encode("secret");
         verify(collaboratorRepository).save(collaborator);
+    }
+
+    @Test
+    void createChecksAdministratorAccessBeforeUsingRepositories() {
+        Collaborator collaborator = collaborator(
+                "Ana",
+                "ana@example.com",
+                "Developer",
+                "secret"
+        );
+
+        doThrow(new SystemAccessDeniedException())
+                .when(systemAuthorizationService)
+                .requireAdmin();
+
+        assertThatThrownBy(() -> collaboratorService.create(collaborator))
+                .isInstanceOf(SystemAccessDeniedException.class)
+                .hasMessage("Administrator access is required.");
+
+        verifyNoInteractions(collaboratorRepository, passwordEncoder);
     }
 
     @Test
@@ -84,6 +114,39 @@ class CollaboratorServiceTest {
     }
 
     @Test
+    void updateChecksAdministratorAccessBeforeLookingUpCollaborator() {
+        Collaborator updatedData = collaborator(
+                "Ana Updated",
+                "ana.updated@example.com",
+                "Manager",
+                " "
+        );
+
+        doThrow(new SystemAccessDeniedException())
+                .when(systemAuthorizationService)
+                .requireAdmin();
+
+        assertThatThrownBy(() -> collaboratorService.update(1L, updatedData))
+                .isInstanceOf(SystemAccessDeniedException.class)
+                .hasMessage("Administrator access is required.");
+
+        verifyNoInteractions(collaboratorRepository, passwordEncoder);
+    }
+
+    @Test
+    void deleteChecksAdministratorAccessBeforeLookingUpCollaborator() {
+        doThrow(new SystemAccessDeniedException())
+                .when(systemAuthorizationService)
+                .requireAdmin();
+
+        assertThatThrownBy(() -> collaboratorService.delete(1L))
+                .isInstanceOf(SystemAccessDeniedException.class)
+                .hasMessage("Administrator access is required.");
+
+        verifyNoInteractions(collaboratorRepository, passwordEncoder);
+    }
+
+    @Test
     void updateKeepsExistingPasswordWhenNewPasswordIsBlank() {
         Collaborator existing = collaborator(
                 "Ana",
@@ -92,6 +155,7 @@ class CollaboratorServiceTest {
                 "{bcrypt}old-password-hash"
         );
         existing.setId(1L);
+        existing.setSystemRole(SystemRole.ADMIN);
 
         Collaborator updatedData = collaborator(
                 "Ana Updated",
@@ -112,6 +176,7 @@ class CollaboratorServiceTest {
 
         assertThat(result.getPassword()).isEqualTo("{bcrypt}old-password-hash");
         assertThat(result.getName()).isEqualTo("Ana Updated");
+        assertThat(result.getSystemRole()).isEqualTo(SystemRole.ADMIN);
         assertThat(result.getActive()).isFalse();
 
         verify(passwordEncoder, never()).encode(any());
