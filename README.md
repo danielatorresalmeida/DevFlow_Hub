@@ -164,6 +164,19 @@ $env:PORT = "8080"
 
 `JWT_SECRET` must be valid Base64 and contain at least 32 bytes after decoding.
 
+#### One-time initial administrator bootstrap
+
+A professional environment should use a dedicated system administrator account rather than promoting a demonstration user or project owner. Before the first start, provide the account through process-level environment variables:
+
+```powershell
+$env:DEVFLOW_BOOTSTRAP_ADMIN_ENABLED = "true"
+$env:DEVFLOW_BOOTSTRAP_ADMIN_NAME = "DevFlow Administrator"
+$env:DEVFLOW_BOOTSTRAP_ADMIN_EMAIL = "admin@example.com"
+$env:DEVFLOW_BOOTSTRAP_ADMIN_PASSWORD = "<unique-strong-password>"
+```
+
+The password must contain 12 to 64 characters, including uppercase, lowercase, numeric and special characters. The bootstrap refuses to run when an administrator already exists or when the email is already assigned. After the account is created, stop the application and remove the four bootstrap variables before starting it again. Do not commit administrator credentials or production secrets.
+
 Start the backend:
 
 ```powershell
