@@ -3,8 +3,12 @@ package com.devflowhub.backend.service;
 import com.devflowhub.backend.entity.Document;
 import com.devflowhub.backend.exception.InvalidOperationException;
 import com.devflowhub.backend.repository.DocumentRepository;
-import com.devflowhub.backend.repository.ProjectRepository;
-import com.devflowhub.backend.repository.TaskRepository;
+import com.devflowhub.backend.security.ProjectAccessService;
+import com.devflowhub.backend.security.TaskAccessService;
+import com.devflowhub.backend.security.CurrentCollaboratorResolver;
+import com.devflowhub.backend.security.ProjectPermission;
+import com.devflowhub.backend.entity.Task;
+import com.devflowhub.backend.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,10 +32,13 @@ class DocumentServiceTest {
     private DocumentRepository documentRepository;
 
     @Mock
-    private ProjectRepository projectRepository;
+    private ProjectAccessService projectAccessService;
 
     @Mock
-    private TaskRepository taskRepository;
+    private TaskAccessService taskAccessService;
+
+    @Mock
+    private CurrentCollaboratorResolver currentCollaboratorResolver;
 
     private DocumentService documentService;
 
@@ -39,8 +46,7 @@ class DocumentServiceTest {
     void setUp() {
         documentService = new DocumentService(
                 documentRepository,
-                projectRepository,
-                taskRepository
+                projectAccessService, taskAccessService, currentCollaboratorResolver
         );
     }
 
@@ -58,8 +64,7 @@ class DocumentServiceTest {
                 LocalDateTime.of(2000, 1, 2, 0, 0)
         );
 
-        when(projectRepository.existsById(7L))
-                .thenReturn(true);
+
 
         when(documentRepository.save(any(Document.class)))
                 .thenAnswer(invocation ->
@@ -86,8 +91,7 @@ class DocumentServiceTest {
         document.setContent("   ");
         document.setTaskId(8L);
 
-        when(taskRepository.existsById(8L))
-                .thenReturn(true);
+        when(taskAccessService.getRequiredForView(8L)).thenReturn(new Task());
 
         when(documentRepository.save(any(Document.class)))
                 .thenAnswer(invocation ->
@@ -137,15 +141,14 @@ class DocumentServiceTest {
         document.setTitle("Project document");
         document.setProjectId(99L);
 
-        when(projectRepository.existsById(99L))
-                .thenReturn(false);
+        when(projectAccessService.requirePermission(99L, ProjectPermission.CONTRIBUTE_TO_PROJECT)).thenThrow(new ResourceNotFoundException("Project not found."));
 
         assertThatThrownBy(() ->
                 documentService.create(document)
         )
-                .isInstanceOf(InvalidOperationException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage(
-                        "The selected project does not exist."
+                        "Project not found."
                 );
     }
 
@@ -155,15 +158,14 @@ class DocumentServiceTest {
         document.setTitle("Task document");
         document.setTaskId(99L);
 
-        when(taskRepository.existsById(99L))
-                .thenReturn(false);
+        when(taskAccessService.getRequiredForView(99L)).thenThrow(new ResourceNotFoundException("Task not found."));
 
         assertThatThrownBy(() ->
                 documentService.create(document)
         )
-                .isInstanceOf(InvalidOperationException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage(
-                        "The selected task does not exist."
+                        "Task not found."
                 );
     }
 
@@ -199,8 +201,7 @@ class DocumentServiceTest {
         when(documentRepository.findById(5L))
                 .thenReturn(Optional.of(existing));
 
-        when(projectRepository.existsById(2L))
-                .thenReturn(true);
+
 
         when(documentRepository.save(any(Document.class)))
                 .thenAnswer(invocation ->
@@ -227,4 +228,53 @@ class DocumentServiceTest {
 
         assertThat(captor.getValue()).isSameAs(existing);
     }
+    @Test
+    void optionalLookupHidesInaccessibleParent() {
+        Document existing = new Document();
+        existing.setProjectId(1L);
+        when(documentRepository.findById(5L)).thenReturn(Optional.of(existing));
+        when(projectAccessService.requirePermission(1L, ProjectPermission.VIEW_PROJECT))
+                .thenThrow(new ResourceNotFoundException("Project not found."));
+        assertThatThrownBy(() -> documentService.findById(5L))
+                .isInstanceOf(ResourceNotFoundException.class).hasMessage("Document not found.");
+    }
+
+    @Test
+    void corruptStoredAssociationCannotBeReadOrListed() {
+        Document corrupt = new Document();
+        corrupt.setProjectId(1L);
+        corrupt.setTaskId(2L);
+        when(documentRepository.findById(5L)).thenReturn(Optional.of(corrupt));
+        when(documentRepository.findByProjectIdOrderByUpdatedAtDesc(1L))
+                .thenReturn(java.util.List.of(corrupt));
+        assertThatThrownBy(() -> documentService.getRequired(5L))
+                .isInstanceOf(ResourceNotFoundException.class).hasMessage("Document not found.");
+        assertThatThrownBy(() -> documentService.findByProjectId(1L))
+                .isInstanceOf(ResourceNotFoundException.class).hasMessage("Document not found.");
+        corrupt.setProjectId(null);
+        corrupt.setTaskId(null);
+        assertThatThrownBy(() -> documentService.getRequired(5L))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void forbiddenDestinationDoesNotMutateManagedDocument() {
+        Document existing = new Document();
+        existing.setProjectId(1L);
+        existing.setTitle("Original");
+        Document target = new Document();
+        target.setProjectId(2L);
+        target.setTitle("Changed");
+        when(documentRepository.findById(5L)).thenReturn(Optional.of(existing));
+        when(projectAccessService.requirePermission(1L, ProjectPermission.VIEW_PROJECT)).thenReturn(new com.devflowhub.backend.entity.ProjectMembership());
+        when(projectAccessService.requirePermission(1L, ProjectPermission.MANAGE_PROJECT)).thenReturn(new com.devflowhub.backend.entity.ProjectMembership());
+        when(projectAccessService.requirePermission(2L, ProjectPermission.CONTRIBUTE_TO_PROJECT))
+                .thenThrow(new com.devflowhub.backend.exception.ProjectAccessDeniedException());
+        assertThatThrownBy(() -> documentService.update(5L, target))
+                .isInstanceOf(com.devflowhub.backend.exception.ProjectAccessDeniedException.class);
+        assertThat(existing.getTitle()).isEqualTo("Original");
+        assertThat(existing.getProjectId()).isEqualTo(1L);
+        org.mockito.Mockito.verify(documentRepository, org.mockito.Mockito.never()).save(any());
+    }
 }
+
