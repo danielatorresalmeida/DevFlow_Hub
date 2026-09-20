@@ -23,7 +23,7 @@ The application currently provides:
 - project ownership transfer;
 - structured API errors for HTTP `400`, `401`, `403`, `404` and `409`;
 - persistent PostgreSQL storage;
-- document and attachment metadata foundations;
+- resource-authorized document CRUD and attachment metadata foundations;
 - a configurable local object-storage provider;
 - automated backend and frontend validation.
 
@@ -51,7 +51,8 @@ The object-storage abstraction is implemented in the backend, but the current HT
 Architecture documentation:
 
 - [`docs/architecture/frontend-decision.md`](docs/architecture/frontend-decision.md)
-- [`docs/architecture/project-access-control.md`](docs/architecture/project-access-control.md)
+- [docs/architecture/project-access-control.md](docs/architecture/project-access-control.md)
+- [docs/architecture/document-authorization.md](docs/architecture/document-authorization.md)
 - [`docs/architecture/project-access-permission-matrix.md`](docs/architecture/project-access-permission-matrix.md)
 - [`docs/architecture/project-access-endpoint-inventory.md`](docs/architecture/project-access-endpoint-inventory.md)
 
@@ -123,6 +124,8 @@ Generated directories such as `backend/target`, `frontend/node_modules` and `fro
 - PostgreSQL
 - Node.js `>=22.22.0`
 - npm
+
+For the reproducible interview setup, follow **[Local demo and walkthrough](docs/DEMO.md)**. The steps below describe a normal schema-only installation.
 
 ### 1. Create the database
 
@@ -216,39 +219,17 @@ Do not commit `.env.local`.
 
 ## Demonstration data and accounts
 
-### Fresh database installation
+The normal installation script creates schema only, with no public accounts or automatic ADMIN. For local evaluation, use the guarded `database/demo_seed.sql` in a database named **devflow_demo** after installing the schema.
 
-The current `database/devflow_hub.sql` seed creates a reproducible baseline containing:
+The seed creates OWNER, MANAGER, CONTRIBUTOR, VIEWER, outsider and system ADMIN accounts. All use the public password `DevFlowDemo-2026!`, marked **DEMO / LOCAL DEVELOPMENT ONLY**. Full commands, account emails, API checks and the interview walkthrough are in **[docs/DEMO.md](docs/DEMO.md)**. Existing installations are not reset; review any legacy demo accounts before deployment.
 
-- 3 collaborators;
-- 2 projects;
-- 3 tasks;
-- 2 internal programs;
-- initial project memberships;
-- foreign keys, constraints and indexes.
+### Real application screenshots
 
-The seed accounts are documented in [`database/README.md`](database/README.md).
+Captured from the running local PostgreSQL demo. Additional dashboard/task captures and context are in the demo guide. Documents are currently API-only; no document UI screenshot is implied.
 
-### Prepared presentation database
-
-The local database prepared for the final presentation contains four role-specific accounts:
-
-| Project role | Name | Email |
+| Login | Project detail | VIEWER access |
 |---|---|---|
-| `OWNER` | Bruno Silva | `bruno.silva@devflowhub.pt` |
-| `MANAGER` | Daniel Rocha | `daniel.rocha@devflowhub.pt` |
-| `CONTRIBUTOR` | Carla Gomes | `carla.gomes@devflowhub.pt` |
-| `VIEWER` | Ana Silva | `ana.silva@devflowhub.pt` |
-
-Shared local demonstration password:
-
-```text
-DevFlowTest-123!
-```
-
-These are public academic demonstration credentials. They must be changed or removed before any use outside the local demonstration environment.
-
-The role-specific presentation accounts are not yet created automatically by the current seed. To reproduce them on a fresh installation, synchronize the collaborators, password hash and memberships in `database/devflow_hub.sql`, or add an equivalent data migration.
+| ![Login](docs/screenshots/login.png) | ![Project](docs/screenshots/project.png) | ![Read-only access](docs/screenshots/viewer-access.png) |
 
 ## Authentication and session behaviour
 
@@ -296,6 +277,12 @@ Additional rules:
 - optimistic-locking and duplicate conflicts return HTTP `409`;
 - inaccessible resources are hidden with HTTP `404`;
 - known resources with disallowed actions return HTTP `403`.
+
+## System and document authorization
+
+`USER` and `ADMIN` are system roles, separate from project membership and the descriptive professional `role`. ADMIN manages collaborator/internal-program writes; the database role is checked on each administrative operation. Generic collaborator JSON cannot change `systemRole`. ADMIN does not bypass project, task or document permissions.
+
+Documents inherit their project or task visibility. Any active project member can read; OWNER/MANAGER/CONTRIBUTOR can create; OWNER/MANAGER can edit/delete. Standalone-task documents belong to the current task assignee. Updates authorize management of the original parent and contribution to the destination before mutation. Hidden/missing documents return 404; insufficient visible roles return 403; inactive document callers return 401. See the [full policy](docs/architecture/document-authorization.md).
 
 ## Task rules
 
@@ -389,13 +376,13 @@ GET    /api/dashboard
 
 ```powershell
 Set-Location ".\backend"
-.\mvnw.cmd clean test
+.\mvnw.cmd clean verify
 ```
 
-Final validated result:
+Phase 2 local validation (2026-09-20):
 
 ```text
-Tests run: 236
+Tests run: 283
 Failures: 0
 Errors: 0
 Skipped: 0
@@ -413,7 +400,7 @@ npm test
 npm run build
 ```
 
-Final validated result:
+Phase 2 local validation (2026-09-20):
 
 ```text
 Test Files: 12 passed
@@ -447,20 +434,20 @@ The workflow is located at:
 .github/workflows/build-validation.yml
 ```
 
-It validates the backend and frontend through Maven, npm, ESLint, Vitest and the production build.
+It validates PRs and pushes to both `main` and `develop` through Maven `clean verify`, npm, ESLint, Vitest and the production build. Both branches require reviewed PRs and successful **Backend** and **Frontend** checks. See [validation and integration notes](docs/phase2-validation.md).
 
 ## Current limitations
 
 - no dedicated React page for internal-program management;
-- document and attachment authorization is not yet fully aligned with project and task access control;
+- attachment metadata endpoints still need resource authorization; document CRUD is protected;
 - attachment content upload, download and deletion are not exposed through HTTP;
 - tasks do not yet have planning `startDate` and `dueDate` fields;
 - no refresh-token workflow or activity-aware session renewal;
 - no warning before session expiry or unsaved-change protection;
 - the interface is currently English-only;
 - collaborator and internal-program dashboard totals are still global;
-- no separate global administrative policy for collaborators and internal programs;
-- presentation role accounts are not yet synchronized with the fresh-install seed.
+- no document React page; document operations are demonstrated through the API;
+- five existing frontend dependency audit alerts (3 moderate, 2 high) remain to be triaged.
 
 ## Roadmap
 
@@ -469,7 +456,7 @@ It validates the backend and frontend through Maven, npm, ESLint, Vitest and the
 - secure refresh tokens and session-expiry warnings;
 - dedicated internal-program React interface;
 - project and task notes pages;
-- complete document and attachment authorization;
+- complete attachment metadata authorization;
 - secure attachment upload and download;
 - import centre for Notion and Toggl Track data;
 - duplicate detection, mapping, conflict resolution and import reports;
