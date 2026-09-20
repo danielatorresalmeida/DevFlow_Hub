@@ -342,5 +342,3 @@ class ApiSecurityIntegrationTest {
         return collaboratorRepository.saveAndFlush(collaborator);
     }
 }
-
-
