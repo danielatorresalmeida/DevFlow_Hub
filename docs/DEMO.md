@@ -75,7 +75,7 @@ From the repository root while the API runs:
 # .\scripts\demo-documents.ps1 -BaseUrl http://localhost:8081
 ```
 
-A successful run includes `All local document authorization checks passed.` and cleanup responses `204`. Public credentials are sent only to loopback addresses. There is no automatic permission escalation or role editing.
+A successful run includes `All local document authorization checks passed.` and cleanup responses `204`. The script requires a loopback `BaseUrl`; run it against the local demo API described above. This initial URL check does not enforce a redirect destination policy. There is no automatic permission escalation or role editing.
 
 ## Real screenshots
 

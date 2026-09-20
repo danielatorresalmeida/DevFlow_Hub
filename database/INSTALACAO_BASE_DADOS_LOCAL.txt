@@ -263,6 +263,10 @@ Executar os scripts pela seguinte ordem:
 
 2. database/migrations/20260724_add_documents_foundation.sql
 
+3. database/migrations/20260727_add_project_memberships.sql
+
+4. database/migrations/20260801_add_system_roles.sql
+
 
 No pgAdmin 4, abrir cada script no Query Tool e executá-lo por
 completo, confirmando que terminou sem erros.
@@ -274,8 +278,12 @@ psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/202607
 
 psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260724_add_documents_foundation.sql
 
+psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260727_add_project_memberships.sql
 
-Os dois scripts são idempotentes e podem ser executados novamente.
+psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260801_add_system_roles.sql
+
+
+Os scripts são idempotentes e podem ser executados novamente.
 
 Depois das migrações, iniciar o backend. A configuração
 spring.jpa.hibernate.ddl-auto=validate faz o arranque falhar quando

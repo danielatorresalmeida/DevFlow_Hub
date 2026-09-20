@@ -754,7 +754,7 @@ Set-Location ".\backend"
 .\mvnw.cmd clean verify
 ```
 
-Na validação realizada em 29/07/2026:
+Na validação da Fase 2 realizada em 20/09/2026:
 
 ```text
 Tests run: 283
@@ -775,7 +775,7 @@ npm test
 npm run build
 ```
 
-Na validação realizada em 29/07/2026:
+Na validação da Fase 2 realizada em 20/09/2026:
 
 ```text
 Test Files: 12 passed

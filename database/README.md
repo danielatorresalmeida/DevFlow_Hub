@@ -67,14 +67,14 @@ Migração idempotente que cria a fundação para documentos e anexos. O modelo 
 - eliminar um projeto ou uma tarefa elimina os respetivos documentos;
 - eliminar um documento elimina a metadata dos respetivos anexos.
 
-A implementação do armazenamento físico e dos endpoints multipart será realizada numa etapa posterior.
+O backend já implementa um provider local de armazenamento de objetos. A API HTTP expõe apenas metadata de anexos; os endpoints de upload multipart, download e eliminação do conteúdo físico continuam planeados.
 
 ### `migrations/20260801_add_system_roles.sql`
 
 Migração idempotente que separa a autorização global das memberships de projeto. O script:
 
 - adiciona `collaborators.system_role`;
-- migra colaboradores existentes para `USER`;
+- preenche roles em falta com `USER`, preservando um `ADMIN` existente na reexecução;
 - aceita apenas `USER` e `ADMIN`;
 - mantém `collaborators.role` como função profissional informativa;
 - inclui um exemplo comentado para promover explicitamente a primeira conta administrativa.
