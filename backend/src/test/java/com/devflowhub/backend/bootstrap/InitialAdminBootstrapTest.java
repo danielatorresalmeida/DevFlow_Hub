@@ -140,6 +140,21 @@ class InitialAdminBootstrapTest {
         verifyNoInteractions(passwordEncoder);
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource(value = {
+            "NULL|admin@example.com|Strong-Admin-2026!|NAME",
+            "Admin|NULL|Strong-Admin-2026!|EMAIL",
+            "Admin|invalid-email|Strong-Admin-2026!|EMAIL",
+            "Admin|admin@example.com|NULL|PASSWORD"
+    }, delimiter = '|', nullValues = "NULL")
+    void incompleteConfigurationFailsWithoutCreatingAccount(String name, String email, String password, String field) {
+        InitialAdminBootstrap bootstrap = bootstrap(properties(true, name, email, password));
+        assertThatThrownBy(() -> bootstrap.run(null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("DEVFLOW_BOOTSTRAP_ADMIN_" + field);
+        verify(collaboratorRepository, never()).save(any());
+        verifyNoInteractions(passwordEncoder);
+    }
     private InitialAdminBootstrap bootstrap(
             AdminBootstrapProperties properties
     ) {
@@ -164,3 +179,4 @@ class InitialAdminBootstrapTest {
         );
     }
 }
+

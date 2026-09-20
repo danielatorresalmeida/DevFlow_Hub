@@ -274,6 +274,53 @@ class ApiSecurityIntegrationTest {
         )).isTrue();
     }
 
+    @Test
+    void ordinaryUserCannotPromoteSelfOrAnotherCollaborator() throws Exception {
+        Collaborator user = saveActiveCollaborator("Strong-User-2026!");
+        Collaborator other = saveActiveCollaborator("Strong-Other-2026!");
+        String token = jwtTokenService.issue(user).accessToken();
+        for (Collaborator target : java.util.List.of(user, other)) {
+            mockMvc.perform(put("/api/collaborators/{id}", target.getId())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                            {"name":"Attempt","email":"%s","role":"Developer","systemRole":"ADMIN"}
+                            """.formatted(target.getEmail())))
+                    .andExpect(status().isForbidden());
+            assertThat(collaboratorRepository.findById(target.getId()).orElseThrow().getSystemRole())
+                    .isEqualTo(SystemRole.USER);
+        }
+    }
+
+    @Test
+    void administratorUpdateCannotAssignSystemRoleThroughEntityPayload() throws Exception {
+        Collaborator admin = saveActiveCollaborator("Strong-Admin-2026!", SystemRole.ADMIN);
+        Collaborator target = saveActiveCollaborator("Strong-User-2026!");
+        mockMvc.perform(put("/api/collaborators/{id}", target.getId())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtTokenService.issue(admin).accessToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"name":"Updated","email":"%s","role":"Developer","systemRole":"ADMIN"}
+                        """.formatted(target.getEmail())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.systemRole").doesNotExist());
+        assertThat(collaboratorRepository.findById(target.getId()).orElseThrow().getSystemRole())
+                .isEqualTo(SystemRole.USER);
+    }
+
+    @Test
+    void administratorClaimCannotOutliveDatabaseDemotion() throws Exception {
+        Collaborator admin = saveActiveCollaborator("Strong-Admin-2026!", SystemRole.ADMIN);
+        String token = jwtTokenService.issue(admin).accessToken();
+        admin.setSystemRole(SystemRole.USER);
+        collaboratorRepository.saveAndFlush(admin);
+        mockMvc.perform(post("/api/internal-programs")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"name":"Forbidden program","status":"PLANNED"}
+                        """))
+                .andExpect(status().isForbidden());
+    }
     private Collaborator saveActiveCollaborator(String rawPassword) {
         return saveActiveCollaborator(rawPassword, SystemRole.USER);
     }
@@ -295,3 +342,5 @@ class ApiSecurityIntegrationTest {
         return collaboratorRepository.saveAndFlush(collaborator);
     }
 }
+
+
