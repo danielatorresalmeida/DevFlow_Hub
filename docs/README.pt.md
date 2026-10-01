@@ -124,7 +124,7 @@ A arquitetura de controlo de acesso está documentada em:
 - Object storage local com proteção contra caminhos inseguros e symlinks.
 - Provider e diretório do object storage configuráveis em runtime.
 - Backend validado com PostgreSQL real e `ddl-auto=validate`.
-- Suite backend validada em 29/07/2026 com 236 testes sem falhas.
+- Suite backend validada na Fase 2 em 20/09/2026 com 283 testes sem falhas.
 
 ### Frontend React
 
@@ -164,7 +164,7 @@ A arquitetura de controlo de acesso está documentada em:
 - Interface responsiva validada em desktop e numa viewport móvel de `390 × 844`.
 - Testes automatizados de armazenamento da autenticação, rotas protegidas e configuração de rotas.
 - `npm run lint`, `npm test` e `npm run build` validados com sucesso.
-- Suite frontend validada em 29/07/2026 com 53 testes em 12 ficheiros.
+- Suite frontend validada na Fase 2 em 20/09/2026 com 53 testes em 12 ficheiros.
 
 ### Alinhamento com o planeamento inicial
 
@@ -186,14 +186,14 @@ A arquitetura, organização por camadas, execução local, documentação e aut
 ### Trabalho ainda pendente e roadmap
 
 - Página React para consulta e gestão de programas internos.
-- Autorização de documentos e anexos através da mesma cadeia de acesso dos projetos e tarefas.
+- Autorização de metadata de anexos (a autorização de documentos já foi implementada).
 - Páginas de notas associadas a projetos e tarefas.
 - Proveniência de documentos e anexos, incluindo `createdById` e `uploadedById`.
 - Upload, download e eliminação segura de conteúdo de anexos através da API.
 - Centro de importação para migrar projetos, tarefas, notas, colaboradores e registos de tempo do Notion e do Toggl Track.
 - Mapeamento de campos, prevenção de duplicados, resolução de conflitos e rastreabilidade das importações.
 - Interface de alteração e redefinição segura de palavra-passe.
-- Política administrativa global separada para colaboradores e programas internos.
+- Interface administrativa dedicada; a política global USER/ADMIN já protege escritas de colaboradores e programas internos.
 - Ajuste do dashboard para distinguir métricas pessoais de métricas globais.
 - Testes Maven de integração com uma instância PostgreSQL dedicada.
 - Revisão da estratégia de armazenamento e renovação do token antes de produção.
@@ -254,50 +254,19 @@ database/
 └── README.md
 ```
 
-- `devflow_hub.sql` cria uma instalação nova e adiciona dados de demonstração.
+- `devflow_hub.sql` cria o esquema, sem contas predefinidas; `demo_seed.sql` adiciona dados apenas à base local `devflow_demo`.
 - `migrate_existing_database.sql` atualiza bases criadas por versões anteriores.
 - `migrations/` contém migrações específicas e datadas.
 - `INSTALACAO_BASE_DADOS_LOCAL.txt` explica como preparar uma base local.
 - `database/README.md` documenta instalação, migração e validação.
 
-### Dados de demonstração de uma instalação nova
+### Demonstração local reproduzível
 
-O script `database/devflow_hub.sql` cria uma base local reproduzível com:
+O guia [DEMO.md](DEMO.md) contém os comandos PostgreSQL, configuração de ambiente, seis contas, percurso de entrevista, verificações da API e cinco screenshots reais. O seed `database/demo_seed.sql` recusa bases cujo nome não seja `devflow_demo` e não repõe passwords, memberships ou edições ao repetir.
 
-- 3 colaboradores;
-- 2 projetos;
-- 3 tarefas;
-- 2 programas internos;
-- memberships derivadas dos gestores e responsáveis das tarefas;
-- foreign keys entre projetos, tarefas, programas e colaboradores;
-- constraints e índices para memberships, documentos e attachments.
+Contas: `owner@demo.example`, `manager@demo.example`, `contributor@demo.example`, `viewer@demo.example`, `outsider@demo.example` e `admin@demo.example`. Password pública: `DevFlowDemo-2026!` — **DEMO / LOCAL DEVELOPMENT ONLY**. Nunca reutilizar em produção. A instalação normal não cria ADMIN; mantém-se o bootstrap único. Contas demo antigas já instaladas não são removidas automaticamente.
 
-A base utilizada durante a apresentação pode conter mais registos criados manualmente. Esses dados locais não fazem parte automaticamente de uma instalação nova.
-
-#### Contas de teste da base preparada para a apresentação
-
-Para validar a matriz completa de permissões na base local preparada para a apresentação, estão configuradas as seguintes contas:
-
-| Papel de projeto | Nome | Email |
-|---|---|---|
-| `OWNER` | Bruno Silva | `bruno.silva@devflowhub.pt` |
-| `MANAGER` | Daniel Rocha | `daniel.rocha@devflowhub.pt` |
-| `CONTRIBUTOR` | Carla Gomes | `carla.gomes@devflowhub.pt` |
-| `VIEWER` | Ana Silva | `ana.silva@devflowhub.pt` |
-
-Todas usam a palavra-passe local de demonstração:
-
-```text
-DevFlowTest-123!
-```
-
-Estas contas permitem testar diretamente os quatro papéis sem alterar memberships durante a demonstração. A coluna profissional `Collaborator.role` continua a ser informativa; as permissões efetivas são determinadas pelas memberships ativas de cada projeto.
-
-> Estas são credenciais públicas de demonstração destinadas exclusivamente ao ambiente académico local. Devem ser alteradas ou removidas antes de qualquer utilização fora desse ambiente.
-
-A documentação destas contas não cria automaticamente os utilizadores. Para que funcionem numa instalação nova, os mesmos colaboradores, o hash da palavra-passe e as memberships correspondentes devem existir em `database/devflow_hub.sql` ou ser adicionados por uma migração de dados equivalente. Enquanto o seed não for sincronizado, os dados mínimos criados pelo script podem ser diferentes dos dados da base preparada para a apresentação.
-
-As instruções completas estão em [`database/INSTALACAO_BASE_DADOS_LOCAL.txt`](database/INSTALACAO_BASE_DADOS_LOCAL.txt).
+O frontend ainda não tem página de documentos. Essa parte da demonstração utiliza `scripts/demo-documents.ps1`, com verificações reais de leitura, criação, edição, eliminação e recusas de acesso.
 
 ## Backend
 
@@ -347,6 +316,10 @@ JWT_EXPIRATION
 OBJECT_STORAGE_PROVIDER
 OBJECT_STORAGE_LOCAL_ROOT_DIRECTORY
 PORT
+DEVFLOW_BOOTSTRAP_ADMIN_ENABLED
+DEVFLOW_BOOTSTRAP_ADMIN_NAME
+DEVFLOW_BOOTSTRAP_ADMIN_EMAIL
+DEVFLOW_BOOTSTRAP_ADMIN_PASSWORD
 ```
 
 Exemplo para PowerShell:
@@ -366,6 +339,19 @@ $env:PORT = "8080"
 
 `JWT_SECRET` deve ser Base64 válido e conter pelo menos 32 bytes depois da descodificação.
 
+#### Bootstrap único do primeiro administrador
+
+Num ambiente profissional deve ser usada uma conta administrativa dedicada, separada das contas de demonstração e dos papéis de projeto. Antes da primeira inicialização, define a conta através de variáveis de ambiente do processo:
+
+```powershell
+$env:DEVFLOW_BOOTSTRAP_ADMIN_ENABLED = "true"
+$env:DEVFLOW_BOOTSTRAP_ADMIN_NAME = "DevFlow Administrator"
+$env:DEVFLOW_BOOTSTRAP_ADMIN_EMAIL = "admin@example.com"
+$env:DEVFLOW_BOOTSTRAP_ADMIN_PASSWORD = "<palavra-passe-forte-e-unica>"
+```
+
+A palavra-passe deve ter entre 12 e 64 caracteres e incluir maiúsculas, minúsculas, números e caracteres especiais. O bootstrap recusa a execução quando já existe um administrador ou quando o email já está atribuído. Depois da criação, interrompe a aplicação e remove as quatro variáveis antes de a iniciar novamente. Credenciais administrativas e segredos de produção nunca devem ser guardados no Git.
+
 O valor predefinido de `JWT_EXPIRATION` é `PT15M`. A implementação atual não possui refresh token, pelo que a sessão termina aproximadamente 15 minutos depois do login mesmo quando existe atividade. Durante testes manuais prolongados pode ser usado outro valor local, por exemplo `PT1H`, sem alterar o código nem guardar essa configuração no Git.
 
 Credenciais reais, palavras-passe privadas, segredos e configurações locais não devem ser guardados no Git. A única exceção são as credenciais públicas de demonstração documentadas acima, criadas exclusivamente para o ambiente académico local.
@@ -374,7 +360,7 @@ Credenciais reais, palavras-passe privadas, segredos e configurações locais n�
 
 ```powershell
 Set-Location ".\backend"
-.\mvnw.cmd clean test
+.\mvnw.cmd clean verify
 ```
 
 ### Iniciar
@@ -520,7 +506,7 @@ PUT    /api/collaborators/{id}
 DELETE /api/collaborators/{id}
 ```
 
-Estes endpoints estão autenticados, mas ainda necessitam de uma política administrativa global separada dos papéis de projeto.
+Leituras exigem autenticação; escritas exigem ADMIN, independente dos papéis de projeto.
 
 ### Projetos
 
@@ -591,7 +577,7 @@ PUT    /api/documents/{id}
 DELETE /api/documents/{id}
 ```
 
-Os endpoints e a persistência estão implementados. A autorização específica de documentos e a proveniência do criador continuam pendentes.
+Os endpoints, a persistência e a autorização por projeto/tarefa estão implementados. A proveniência do criador e a página React continuam pendentes.
 
 ### Anexos
 
@@ -612,7 +598,7 @@ PUT    /api/internal-programs/{id}
 DELETE /api/internal-programs/{id}
 ```
 
-Tal como os colaboradores, os programas internos ainda necessitam de uma política administrativa global própria.
+Tal como os colaboradores, escritas de programas internos exigem ADMIN.
 
 ### Dashboard
 
@@ -631,7 +617,7 @@ A resposta inclui:
 - tarefas recentes acessíveis;
 - projetos acessíveis com prazos futuros.
 
-Os valores de colaboradores e programas continuam globais. Esta diferença deve ser resolvida quando for introduzida a autorização administrativa global.
+Os valores de colaboradores e programas continuam globais; a introdução de ADMIN não alterou a visibilidade destas métricas.
 
 ## Detalhe de projetos no frontend
 
@@ -708,6 +694,12 @@ O backend pode recusar uma ação apresentada pela interface quando o utilizador
 
 ## Segurança e autorização
 
+A Fase 2 reutiliza os quatro commits de `develop` relativos a SystemRole, autorização global e bootstrap administrativo. ADMIN gere escritas de colaboradores e programas internos, mas não contorna memberships. O role é verificado na base; o JWT não concede privilégios administrativos depois de uma despromoção.
+
+Documentos herdam acesso do projeto/tarefa: membros ativos leem; OWNER/MANAGER/CONTRIBUTOR criam; OWNER/MANAGER editam e eliminam. Em tarefas independentes, apenas o responsável atual tem acesso. Uma mudança de associação valida a origem e o destino antes de alterar o documento. Sem acesso devolve 404; papel insuficiente num recurso visível devolve 403. Não existe campo de autoria de documento que justifique edição pelo CONTRIBUTOR.
+
+Consultar o [modelo de autorização](architecture/document-authorization.md) e as [evidências e limitações da Fase 2](phase2-validation.md). A autorização dos endpoints de metadata de anexos continua pendente; não se afirma que toda a API está livre de IDOR.
+
 ### Sessão do frontend
 
 A implementação atual guarda a sessão JWT em `sessionStorage` e calcula localmente a data de expiração com base no campo `expiresIn`.
@@ -759,13 +751,13 @@ As respostas não expõem stack traces, hashes de palavras-passe nem detalhes in
 
 ```powershell
 Set-Location ".\backend"
-.\mvnw.cmd clean test
+.\mvnw.cmd clean verify
 ```
 
-Na validação realizada em 29/07/2026:
+Na validação da Fase 2 realizada em 20/09/2026:
 
 ```text
-Tests run: 236
+Tests run: 283
 Failures: 0
 Errors: 0
 Skipped: 0
@@ -783,7 +775,7 @@ npm test
 npm run build
 ```
 
-Na validação realizada em 29/07/2026:
+Na validação da Fase 2 realizada em 20/09/2026:
 
 ```text
 Test Files: 12 passed
@@ -794,13 +786,15 @@ Build: aprovado
 
 ## Validação automática no GitHub
 
+O mesmo workflow valida PRs e pushes para `main` e `develop`: backend `clean verify`; frontend `npm ci`, lint, testes e build. As duas branches exigem PR, uma aprovação, resolução de conversas e checks **Backend** e **Frontend** bem-sucedidos, também para administradores. Não foi feito merge automático. Os detalhes e passos manuais estão em [phase2-validation.md](phase2-validation.md).
+
 O workflow encontra-se em:
 
 ```text
 .github/workflows/build-validation.yml
 ```
 
-É executado em pull requests para `develop`, pushes para `develop` e manualmente através de `workflow_dispatch`.
+É executado em pull requests e pushes para `develop` e `main`, e manualmente através de `workflow_dispatch`.
 
 O job do backend executa:
 

@@ -29,6 +29,24 @@ class ApiExceptionHandlerTest {
         assertThat(response.getBody().validationErrors()).isEmpty();
         assertThat(response.getBody().timestamp()).isNotNull();
     }
+
+    @Test
+    void systemAccessDeniedReturnsForbiddenApiError() {
+        ResponseEntity<ApiError> response = exceptionHandler
+                .handleSystemAccessDenied(
+                        new SystemAccessDeniedException()
+                );
+
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().status()).isEqualTo(403);
+        assertThat(response.getBody().message()).isEqualTo(
+                "Administrator access is required."
+        );
+        assertThat(response.getBody().validationErrors()).isEmpty();
+    }
+
     @Test
     void resourceConflictReturnsConflictApiError() {
         ResponseEntity<ApiError> response = exceptionHandler

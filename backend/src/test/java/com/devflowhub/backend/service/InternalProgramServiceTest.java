@@ -2,8 +2,10 @@ package com.devflowhub.backend.service;
 
 import com.devflowhub.backend.entity.InternalProgram;
 import com.devflowhub.backend.exception.InvalidOperationException;
+import com.devflowhub.backend.exception.SystemAccessDeniedException;
 import com.devflowhub.backend.repository.CollaboratorRepository;
 import com.devflowhub.backend.repository.InternalProgramRepository;
+import com.devflowhub.backend.security.SystemAuthorizationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +17,8 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,13 +30,17 @@ class InternalProgramServiceTest {
     @Mock
     private CollaboratorRepository collaboratorRepository;
 
+    @Mock
+    private SystemAuthorizationService systemAuthorizationService;
+
     private InternalProgramService internalProgramService;
 
     @BeforeEach
     void setUp() {
         internalProgramService = new InternalProgramService(
                 internalProgramRepository,
-                collaboratorRepository
+                collaboratorRepository,
+                systemAuthorizationService
         );
     }
 
@@ -51,6 +59,62 @@ class InternalProgramServiceTest {
         assertThat(result.getName()).isEqualTo("Java Academy");
         assertThat(result.getArea()).isEqualTo("Engineering");
         assertThat(result.getStatus()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void createChecksAdministratorAccessBeforeUsingRepositories() {
+        InternalProgram program = new InternalProgram();
+        program.setName("Java Academy");
+        program.setStatus("PLANNED");
+
+        doThrow(new SystemAccessDeniedException())
+                .when(systemAuthorizationService)
+                .requireAdmin();
+
+        assertThatThrownBy(() -> internalProgramService.create(program))
+                .isInstanceOf(SystemAccessDeniedException.class)
+                .hasMessage("Administrator access is required.");
+
+        verifyNoInteractions(
+                internalProgramRepository,
+                collaboratorRepository
+        );
+    }
+
+    @Test
+    void updateChecksAdministratorAccessBeforeLookingUpProgram() {
+        InternalProgram updatedData = new InternalProgram();
+        updatedData.setName("Updated Academy");
+        updatedData.setStatus("ACTIVE");
+
+        doThrow(new SystemAccessDeniedException())
+                .when(systemAuthorizationService)
+                .requireAdmin();
+
+        assertThatThrownBy(() -> internalProgramService.update(1L, updatedData))
+                .isInstanceOf(SystemAccessDeniedException.class)
+                .hasMessage("Administrator access is required.");
+
+        verifyNoInteractions(
+                internalProgramRepository,
+                collaboratorRepository
+        );
+    }
+
+    @Test
+    void deleteChecksAdministratorAccessBeforeLookingUpProgram() {
+        doThrow(new SystemAccessDeniedException())
+                .when(systemAuthorizationService)
+                .requireAdmin();
+
+        assertThatThrownBy(() -> internalProgramService.delete(1L))
+                .isInstanceOf(SystemAccessDeniedException.class)
+                .hasMessage("Administrator access is required.");
+
+        verifyNoInteractions(
+                internalProgramRepository,
+                collaboratorRepository
+        );
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.devflowhub.backend.service;
 
+import com.devflowhub.backend.domain.SystemRole;
 import com.devflowhub.backend.config.JwtProperties;
 import com.devflowhub.backend.entity.Collaborator;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,7 @@ class JwtTokenServiceTest {
         collaborator.setName("Ana Silva");
         collaborator.setEmail("ana@example.com");
         collaborator.setRole("Developer");
+        collaborator.setSystemRole(SystemRole.ADMIN);
         collaborator.setActive(true);
 
         JwtTokenService.IssuedToken issuedToken = service.issue(collaborator);
@@ -67,6 +69,7 @@ class JwtTokenServiceTest {
         assertThat(jwt.getClaimAsString("email")).isEqualTo("ana@example.com");
         assertThat(jwt.getClaimAsString("name")).isEqualTo("Ana Silva");
         assertThat(jwt.getClaimAsString("role")).isEqualTo("Developer");
+        assertThat(jwt.getClaimAsString("system_role")).isEqualTo("ADMIN");
         assertThat(jwt.getId()).isNotBlank();
         assertThat(jwt.getExpiresAt()).isAfter(jwt.getIssuedAt());
     }

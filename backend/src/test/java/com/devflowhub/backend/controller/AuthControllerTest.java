@@ -1,5 +1,6 @@
 package com.devflowhub.backend.controller;
 
+import com.devflowhub.backend.domain.SystemRole;
 import com.devflowhub.backend.dto.AuthenticatedCollaboratorResponse;
 import com.devflowhub.backend.dto.ChangePasswordRequest;
 import com.devflowhub.backend.dto.LoginRequest;
@@ -66,6 +67,7 @@ class AuthControllerTest {
                                 "Ana Silva",
                                 "ana@example.com",
                                 "Developer",
+                                SystemRole.USER,
                                 true
                         )
                 ));
@@ -85,6 +87,8 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.collaborator.id").value(1))
                 .andExpect(jsonPath("$.collaborator.email")
                         .value("ana@example.com"))
+                .andExpect(jsonPath("$.collaborator.systemRole")
+                        .value("USER"))
                 .andExpect(jsonPath("$.collaborator.active").value(true))
                 .andExpect(jsonPath("$.collaborator.password").doesNotExist())
                 .andExpect(jsonPath("$.password").doesNotExist());

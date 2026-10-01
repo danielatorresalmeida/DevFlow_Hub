@@ -1,5 +1,6 @@
 package com.devflowhub.backend.security;
 
+import com.devflowhub.backend.domain.SystemRole;
 import com.devflowhub.backend.entity.Collaborator;
 import com.devflowhub.backend.repository.CollaboratorRepository;
 import com.devflowhub.backend.service.JwtTokenService;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -103,6 +105,142 @@ class ApiSecurityIntegrationTest {
     }
 
     @Test
+    void standardUserCannotCreateCollaborator() throws Exception {
+        Collaborator collaborator = saveActiveCollaborator(
+                "current-secret",
+                SystemRole.USER
+        );
+
+        String accessToken = jwtTokenService
+                .issue(collaborator)
+                .accessToken();
+
+        mockMvc.perform(post("/api/collaborators")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer " + accessToken
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Created By Standard User",
+                                  "email": "standard-user-create@example.com",
+                                  "password": "new-secret-123",
+                                  "role": "Developer",
+                                  "active": true
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message")
+                        .value("Administrator access is required."));
+    }
+
+    @Test
+    void administratorCanCreateCollaborator() throws Exception {
+        Collaborator administrator = saveActiveCollaborator(
+                "current-secret",
+                SystemRole.ADMIN
+        );
+
+        String accessToken = jwtTokenService
+                .issue(administrator)
+                .accessToken();
+
+        String email = "admin-created-" + UUID.randomUUID()
+                + "@example.com";
+
+        mockMvc.perform(post("/api/collaborators")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer " + accessToken
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Created By Administrator",
+                                  "email": "%s",
+                                  "password": "new-secret-123",
+                                  "role": "Developer",
+                                  "systemRole": "ADMIN",
+                                  "active": true
+                                }
+                                """.formatted(email)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name")
+                        .value("Created By Administrator"))
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.password").doesNotExist())
+                .andExpect(jsonPath("$.systemRole").doesNotExist());
+
+        Collaborator created = collaboratorRepository
+                .findByEmailIgnoreCase(email)
+                .orElseThrow();
+
+        assertThat(created.getSystemRole()).isEqualTo(SystemRole.USER);
+    }
+
+    @Test
+    void standardUserCannotCreateInternalProgram() throws Exception {
+        Collaborator collaborator = saveActiveCollaborator(
+                "current-secret",
+                SystemRole.USER
+        );
+
+        String accessToken = jwtTokenService
+                .issue(collaborator)
+                .accessToken();
+
+        mockMvc.perform(post("/api/internal-programs")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer " + accessToken
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Unauthorized Program",
+                                  "status": "PLANNED"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message")
+                        .value("Administrator access is required."));
+    }
+
+    @Test
+    void administratorCanCreateInternalProgram() throws Exception {
+        Collaborator administrator = saveActiveCollaborator(
+                "current-secret",
+                SystemRole.ADMIN
+        );
+
+        String accessToken = jwtTokenService
+                .issue(administrator)
+                .accessToken();
+
+        mockMvc.perform(post("/api/internal-programs")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer " + accessToken
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Administrator Program",
+                                  "area": "Engineering",
+                                  "status": "PLANNED"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name")
+                        .value("Administrator Program"))
+                .andExpect(jsonPath("$.area").value("Engineering"))
+                .andExpect(jsonPath("$.status").value("PLANNED"));
+    }
+
+    @Test
     void changePasswordUsesCollaboratorIdentityFromJwt() throws Exception {
         Collaborator collaborator = saveActiveCollaborator(
                 "current-secret"
@@ -136,7 +274,61 @@ class ApiSecurityIntegrationTest {
         )).isTrue();
     }
 
+    @Test
+    void ordinaryUserCannotPromoteSelfOrAnotherCollaborator() throws Exception {
+        Collaborator user = saveActiveCollaborator("Strong-User-2026!");
+        Collaborator other = saveActiveCollaborator("Strong-Other-2026!");
+        String token = jwtTokenService.issue(user).accessToken();
+        for (Collaborator target : java.util.List.of(user, other)) {
+            mockMvc.perform(put("/api/collaborators/{id}", target.getId())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                            {"name":"Attempt","email":"%s","role":"Developer","systemRole":"ADMIN"}
+                            """.formatted(target.getEmail())))
+                    .andExpect(status().isForbidden());
+            assertThat(collaboratorRepository.findById(target.getId()).orElseThrow().getSystemRole())
+                    .isEqualTo(SystemRole.USER);
+        }
+    }
+
+    @Test
+    void administratorUpdateCannotAssignSystemRoleThroughEntityPayload() throws Exception {
+        Collaborator admin = saveActiveCollaborator("Strong-Admin-2026!", SystemRole.ADMIN);
+        Collaborator target = saveActiveCollaborator("Strong-User-2026!");
+        mockMvc.perform(put("/api/collaborators/{id}", target.getId())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtTokenService.issue(admin).accessToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"name":"Updated","email":"%s","role":"Developer","systemRole":"ADMIN"}
+                        """.formatted(target.getEmail())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.systemRole").doesNotExist());
+        assertThat(collaboratorRepository.findById(target.getId()).orElseThrow().getSystemRole())
+                .isEqualTo(SystemRole.USER);
+    }
+
+    @Test
+    void administratorClaimCannotOutliveDatabaseDemotion() throws Exception {
+        Collaborator admin = saveActiveCollaborator("Strong-Admin-2026!", SystemRole.ADMIN);
+        String token = jwtTokenService.issue(admin).accessToken();
+        admin.setSystemRole(SystemRole.USER);
+        collaboratorRepository.saveAndFlush(admin);
+        mockMvc.perform(post("/api/internal-programs")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"name":"Forbidden program","status":"PLANNED"}
+                        """))
+                .andExpect(status().isForbidden());
+    }
     private Collaborator saveActiveCollaborator(String rawPassword) {
+        return saveActiveCollaborator(rawPassword, SystemRole.USER);
+    }
+
+    private Collaborator saveActiveCollaborator(
+            String rawPassword,
+            SystemRole systemRole
+    ) {
         Collaborator collaborator = new Collaborator();
         collaborator.setName("Security Test");
         collaborator.setEmail(
@@ -144,6 +336,7 @@ class ApiSecurityIntegrationTest {
         );
         collaborator.setPassword(passwordEncoder.encode(rawPassword));
         collaborator.setRole("Developer");
+        collaborator.setSystemRole(systemRole);
         collaborator.setActive(true);
 
         return collaboratorRepository.saveAndFlush(collaborator);

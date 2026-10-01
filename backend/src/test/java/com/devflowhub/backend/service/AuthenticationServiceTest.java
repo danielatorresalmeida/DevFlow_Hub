@@ -1,5 +1,6 @@
 package com.devflowhub.backend.service;
 
+import com.devflowhub.backend.domain.SystemRole;
 import com.devflowhub.backend.dto.ChangePasswordRequest;
 import com.devflowhub.backend.dto.LoginRequest;
 import com.devflowhub.backend.dto.LoginResponse;
@@ -70,6 +71,7 @@ class AuthenticationServiceTest {
         assertThat(response.collaborator().name()).isEqualTo("Ana Silva");
         assertThat(response.collaborator().email()).isEqualTo("ana@example.com");
         assertThat(response.collaborator().role()).isEqualTo("Developer");
+        assertThat(response.collaborator().systemRole()).isEqualTo(SystemRole.ADMIN);
         assertThat(response.collaborator().active()).isTrue();
     }
 
@@ -173,6 +175,7 @@ class AuthenticationServiceTest {
         collaborator.setEmail("ana@example.com");
         collaborator.setPassword("{bcrypt}stored-hash");
         collaborator.setRole("Developer");
+        collaborator.setSystemRole(SystemRole.ADMIN);
         collaborator.setActive(true);
         return collaborator;
     }

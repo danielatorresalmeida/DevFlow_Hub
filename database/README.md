@@ -14,10 +14,11 @@ Cria uma instalação nova da base de dados, incluindo:
 - tabela `internal_programs`;
 - tabela `documents`;
 - tabela `attachments`;
+- papel global `collaborators.system_role`;
 - chaves estrangeiras;
 - restrições de domínio;
 - índices;
-- dados de demonstração.
+- esquema sem contas predefinidas (demo opcional separada).
 
 ### `migrate_existing_database.sql`
 
@@ -66,7 +67,17 @@ Migração idempotente que cria a fundação para documentos e anexos. O modelo 
 - eliminar um projeto ou uma tarefa elimina os respetivos documentos;
 - eliminar um documento elimina a metadata dos respetivos anexos.
 
-A implementação do armazenamento físico e dos endpoints multipart será realizada numa etapa posterior.
+O backend já implementa um provider local de armazenamento de objetos. A API HTTP expõe apenas metadata de anexos; os endpoints de upload multipart, download e eliminação do conteúdo físico continuam planeados.
+
+### `migrations/20260801_add_system_roles.sql`
+
+Migração idempotente que separa a autorização global das memberships de projeto. O script:
+
+- adiciona `collaborators.system_role`;
+- preenche roles em falta com `USER`, preservando um `ADMIN` existente na reexecução;
+- aceita apenas `USER` e `ADMIN`;
+- mantém `collaborators.role` como função profissional informativa;
+- inclui um exemplo comentado para promover explicitamente a primeira conta administrativa.
 
 ## Atualizar uma instalação existente
 
@@ -78,6 +89,8 @@ Liquibase. Devem ser executadas pela seguinte ordem:
 
 1. `migrations/20260724_restore_core_foreign_keys.sql`
 2. `migrations/20260724_add_documents_foundation.sql`
+3. `migrations/20260727_add_project_memberships.sql`
+4. `migrations/20260801_add_system_roles.sql`
 
 A partir da raiz do projeto, com `psql` disponível no `PATH`:
 
@@ -85,9 +98,13 @@ A partir da raiz do projeto, com `psql` disponível no `PATH`:
 psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260724_restore_core_foreign_keys.sql
 
 psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260724_add_documents_foundation.sql
+
+psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260727_add_project_memberships.sql
+
+psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/migrations/20260801_add_system_roles.sql
 ```
 
-Os dois scripts são idempotentes e podem ser executados novamente para
+Os scripts são idempotentes e podem ser executados novamente para
 verificação. `ON_ERROR_STOP=1` impede que a execução continue depois de um
 erro SQL.
 
@@ -111,26 +128,11 @@ psql -U postgres -d devflow_hub -v ON_ERROR_STOP=1 -f database/devflow_hub.sql
 
 ## Dados e contas de demonstração
 
-Uma instalação nova contém:
+A instalação normal cria apenas o esquema. O seed opcional `demo_seed.sql` exige a base `devflow_demo` e cria seis contas: OWNER, MANAGER, CONTRIBUTOR, VIEWER, outsider e ADMIN, com password pública `DevFlowDemo-2026!` — **DEMO / LOCAL DEVELOPMENT ONLY**.
 
-- 3 colaboradores;
-- 2 projetos;
-- 3 tarefas;
-- 2 programas internos.
+Seguir [o guia de demonstração](../docs/DEMO.md) para configurar PostgreSQL, iniciar a aplicação e reproduzir permissões. ADMIN não recebe acesso automático aos projetos. O bootstrap administrativo de instalações normais é independente da demo.
 
-Todas as contas usam a palavra-passe local `password123`:
-
-| Nome | Email | Acesso inicial |
-|---|---|---|
-| Carla Mendes | `carla.mendes@example.com` | `OWNER` e gestora dos projetos de demonstração |
-| Ana Silva | `ana.silva@example.com` | `CONTRIBUTOR` em `DevFlow Hub MVP` |
-| Bruno Costa | `bruno.costa@example.com` | `CONTRIBUTOR` em `DevFlow Hub MVP` |
-
-A função profissional guardada em `collaborators.role` é informativa. A autorização de cada projeto depende da tabela `project_memberships`.
-
-Para testar `MANAGER` e `VIEWER`, inicia sessão como Carla Mendes, abre um projeto e altera ou adiciona memberships. Depois autentica-te com a conta correspondente.
-
-> Estas credenciais são exclusivamente académicas e locais. Devem ser substituídas ou removidas antes de qualquer utilização fora do ambiente de demonstração.
+Contas criadas pelo antigo seed não são alteradas nem removidas automaticamente. Rever contas e passwords públicas em bases existentes antes de qualquer utilização fora da demonstração local.
 
 ## Verificação rápida
 
@@ -145,14 +147,14 @@ SELECT 'internal_programs', COUNT(*) FROM internal_programs
 ORDER BY table_name;
 ```
 
-Numa instalação nova, o resultado esperado é:
+Numa instalação normal nova todas as tabelas ficam vazias. Depois de executar o seed opcional na base devflow_demo, o resultado esperado é:
 
 | Tabela | Registos |
 |---|---:|
-| `collaborators` | 3 |
+| `collaborators` | 6 |
 | `projects` | 2 |
 | `tasks` | 3 |
-| `internal_programs` | 2 |
+| `internal_programs` | 0 |
 
 Bases utilizadas para desenvolvimento ou apresentação podem conter mais registos criados manualmente. Esses dados não são incluídos automaticamente no script de instalação.
 
@@ -160,5 +162,9 @@ Bases utilizadas para desenvolvimento ou apresentação podem conter mais regist
 
 - Não guardar a palavra-passe administrativa do PostgreSQL no repositório.
 - Não copiar uma base de desenvolvimento com dados privados para uma entrega pública.
-- Não reutilizar `password123` fora do ambiente local de demonstração.
+- Não reutilizar credenciais do seed fora da demonstração local.
 - Não reiniciar sequências de IDs numa base de produção. IDs eliminados podem deixar intervalos e não devem ser reutilizados para fins de apresentação.
+
+## Testar a migração de roles
+
+O script database/tests/system_roles.sql usa uma tabela temporária e valida defaults USER, preservação de ADMIN ao repetir, e rejeição de valores inválidos/NULL. Executar com psql numa base local; a tabela temporária desaparece ao fechar a ligação.
