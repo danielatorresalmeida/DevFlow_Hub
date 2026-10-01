@@ -17,6 +17,22 @@ DevFlow Hub brings collaborators, projects, Agile tasks, role-based access and t
 - 🧪 Automated backend and frontend testing
 - 🔄 Continuous Integration with GitHub Actions
 
+## 📸 Application Preview
+
+### Dashboard
+
+![DevFlow Hub dashboard](docs/screenshots/dashboard.png)
+
+### Project Management
+
+![DevFlow Hub project management](docs/screenshots/project.png)
+
+### Task Management
+
+![DevFlow Hub task management](docs/screenshots/task.png)
+
+---
+
 **Stable academic submission:** `submission-2026-07-30`
 
 > Active development continues through pull requests. Features that are not merged into `main` are documented separately and are not presented here as part of the stable release.
