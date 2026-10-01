@@ -2,9 +2,26 @@
 
 > Portuguese documentation: [`docs/README.pt.md`](docs/README.pt.md)
 
-DevFlow Hub is an academic full-stack web application for managing collaborators, projects, Agile tasks, role-based access and tracked work time in one workspace.
+Full-stack project management platform built with **Java 21, Spring Boot, React, TypeScript and PostgreSQL**.
 
-The final submission is available on the `main` branch and is tagged as `submission-2026-07-30`.
+DevFlow Hub brings collaborators, projects, Agile tasks, role-based access and tracked work time into a single workspace.
+
+## ✨ Highlights
+
+- 🔐 JWT authentication and role-based project permissions
+- 📁 Project and collaborator management
+- ✅ Standalone and project-based task workflows
+- ⏱️ Integrated task time tracking
+- 👥 OWNER, MANAGER, CONTRIBUTOR and VIEWER project roles
+- 🗄️ PostgreSQL persistence
+- 🧪 Automated backend and frontend testing
+- 🔄 Continuous Integration with GitHub Actions
+
+**Stable academic submission:** `submission-2026-07-30`
+
+> Active development continues through pull requests. Features that are not merged into `main` are documented separately and are not presented here as part of the stable release.
+
+---
 
 ## Overview
 
